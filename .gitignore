@@ -29,3 +29,7 @@ docs/strategy-*.md
 
 # Local editor / agent session state
 .claude/
+
+# video build artifacts (committed via gh release instead)
+video/demo.mp4
+video/demoTEMP*
