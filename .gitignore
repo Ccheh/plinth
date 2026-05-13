@@ -36,3 +36,6 @@ video/demoTEMP*
 
 # Aster API docs (large, fetched from upstream for reference only)
 aster-futures-testnet.md
+
+# Demo wallet keys generated at runtime (testnet only, but still — don't commit)
+underwriter/bob-wallet.txt

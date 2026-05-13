@@ -35,8 +35,10 @@ v0 is preserved on chain as the historical/demo artifact (5 vaults with full lif
 Combined deployed gas (v0 + v0.5): ~4M (~0.16 USDC at 40 gwei).
 
 - **Web UI**: https://ccheh.github.io/plinth/
+- **Verifiable-PnL Demo (interactive)**: https://ccheh.github.io/plinth/verify.html — reconciliation runs in your browser
 - **Pitch video**: [demo.mp4 (2.5 min)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4)
 - **Submission one-pager**: [docs/submission.md](docs/submission.md)
+- **Security audit**: [docs/security-audit.md](docs/security-audit.md) — 11 findings, 6 closed in v0.5
 
 ### Live vaults (as of submission)
 
@@ -83,6 +85,12 @@ Vault #5 demonstrates the architectural payoff of Plinth's Underwriter Review la
 3 round-trips were executed cumulatively (1 long, 1 long, 1 short). All 3 had positive directional moves; fees ate the gross profit. Net realized: `−0.135 USDT` across 6 fills, matched to 0.00% delta on chain ([second verifier review tx](https://testnet.arcscan.app/tx/0xf6c6b142bbbd415e5e6facab36301540be00fd03c97615f56bdc5e3352f9939c)). Total experimental cost: $0.13 USDT.
 
 The same architecture works against any public-chain venue, including future Arc-native perp DEXes. Aster L1 was picked for v0 because it was readily available; the integration code lives in [`aster/`](aster/).
+
+### Wallet diversity in the demo
+
+Plinth's multi-underwriter design supports any number of independent reviewers, each posting from their own key. The v0 demos exercise this with **two distinct on-chain identities**: the operator's automated agents (which run Aster Verifier + Risk Monitor + LLM Underwriter from one signing key) and a separate fresh wallet `0xA4Fe6D03…` ([`underwriter/bob-deposit-and-review.ts`](underwriter/bob-deposit-and-review.ts)) which deposited 0.003 USDC into Vault #1 and posted a qualitative review of Vault #5 from its own signing key.
+
+The fresh wallet is funded by the operator and not a claim of unaffiliated third-party participation — it exists to demonstrate that the protocol's cryptographic multi-signer design works end-to-end at the wallet level, not just at the contract level. The [review markdown](https://ccheh.github.io/plinth/reviews/0xefb495a02c14af970104d62e9623d83eea8d0b725dea9ffd6b7aa479284430fc-bob-1778679308638.md) makes this transparent in its footer.
 
 ### Risk Monitor — second independent Underwriter, complementary to verifiable-PnL
 
