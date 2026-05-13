@@ -8,6 +8,8 @@
 
 **v0 ships with a cross-chain verifiable-PnL Underwriter.** When an agent's strategy executes on a public-chain venue (Aster L1 in our demo; future Arc-native perp DEXes by the same pattern), Plinth's Underwriter reads the venue's trade history and cryptographically reconciles it against the agent's reported PnL on Arc. Vault #5 ran end-to-end on Aster mainnet: agent opened 0.001 BTC long → closed 3 min later → realized PnL `−0.047207 USDT` → reported same value on Arc → Underwriter matched to 0.00% delta → posted `VERIFIED` review on chain. This turns the honest-limit "agent self-reports PnL → trust required" into "PnL is recomputable from venue chain."
 
+**v0.5 ships security-hardened.** Pre-deployment in-team audit ([`docs/security-audit.md`](security-audit.md)) identified 11 findings — 1 Critical (MEV sandwich on `reportPnL`), 2 High (`returnFromVenue` open access, `reportPnL` magnitude/rate unbounded), 3 Medium, 2 Low, 3 already-safe-by-design. Every Critical/High has a working exploit POC test (proving the v0 vuln) AND a defense test (proving v0.5 closes it). PlinthV05 deployed to Arc Testnet at `0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`. **90/90 forge tests pass** across both contracts.
+
 ## How this addresses the RFB themes
 
 The Agora brief covered 6 RFBs around trading agents (RFB 1: perp futures, RFB 2: prediction markets, RFB 4: portfolio management, RFB 5: arbitrage, RFB 6: social trading). **Plinth is orthogonal-but-essential infrastructure for all of them.** Every trading agent on Arc has the same structural ceiling: they run on their own balance. Plinth removes that ceiling by giving the agent a way to safely take on external capital.

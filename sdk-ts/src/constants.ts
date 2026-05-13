@@ -12,13 +12,35 @@ export const ARC_TESTNET: ArcChain = {
   explorer: "https://testnet.arcscan.app",
 };
 
-/** Canonical Plinth v0 deployment on Arc Testnet. */
+/** Plinth v0 deployment on Arc Testnet.
+ *  Historical / demo artifact. Lifecycle reference, 6 vaults, 6 underwriter
+ *  reviews. For new vaults, prefer PLINTH_V05_ARC_TESTNET (security-hardened). */
 export const PLINTH_ARC_TESTNET = {
   plinth: "0xc2994ce3df612ebd2f898244a992a0bbfef86627" as Hex,
   mockVenue1: "0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd" as Hex,
   mockVenue2: "0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35" as Hex,
-  /** Deploy tx; useful as block-anchor for event indexers. */
   deployTx: "0xe10e704a6b7240095b74518da5e94ae3086237dd71ff05f2fbc52cfd615fe583" as Hex,
+} as const;
+
+/** Plinth v0.5 — security-hardened deployment on Arc Testnet.
+ *  Closes 6 audit findings vs v0:
+ *    #1 sandwich-on-reportPnL → deposit cooldown
+ *    #2 returnFromVenue griefing → access control
+ *    #3 reportPnL inflation rug → rate limit
+ *    #4 reportPnL on Closed vault → rejected
+ *    #6 reportPnL magnitude overflow → bounded
+ *    #8 strategyDescriptor length → capped
+ *  See docs/security-audit.md for the full audit report. */
+export const PLINTH_V05_ARC_TESTNET = {
+  plinth: "0xba1b087b0ac77b398c250a9fd7e298f3f96addc7" as Hex,
+  mockVenue1: "0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd" as Hex,
+  mockVenue2: "0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35" as Hex,
+  deployTx: "0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d" as Hex,
+  DEPOSIT_COOLDOWN_SECONDS: 3600,
+  MAX_PNL_MULTIPLE: 10n,
+  PNL_RATE_PCT: 25n,
+  PNL_RATE_WINDOW_SECONDS: 3600,
+  MAX_STRATEGY_LEN: 1024,
 } as const;
 
 /** Vault lifecycle states; mirrors Plinth.sol's enum. */
