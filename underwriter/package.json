@@ -1,0 +1,20 @@
+{
+  "name": "plinth-underwriter",
+  "version": "0.0.1",
+  "private": true,
+  "description": "LLM-driven Underwriter Agent for Plinth — analyzes vault strategy descriptors + on-chain history, outputs risk rating + signed review, posts hash on chain.",
+  "type": "module",
+  "scripts": {
+    "review": "tsx review.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "viem": "^2.48.11"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  }
+}

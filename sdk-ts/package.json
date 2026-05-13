@@ -1,0 +1,26 @@
+{
+  "name": "@plinth/sdk",
+  "version": "0.0.1",
+  "description": "TypeScript SDK for Plinth — capital layer for AI trading agents on Arc.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc --noEmit",
+    "demo": "tsx examples/full-lifecycle.ts"
+  },
+  "keywords": ["plinth", "arc", "usdc", "ai-agents", "trading", "hedge-fund", "tokenized", "vault"],
+  "license": "MIT",
+  "dependencies": {
+    "viem": "^2.48.11"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.6"
+  }
+}

@@ -9,12 +9,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-52%2F52%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
+[![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0%20live-blue)](https://testnet.arcscan.app/address/0xc2994ce3df612ebd2f898244a992a0bbfef86627)
 
-> **Read this first.** Plinth is v0. The Solidity is complete, 52 forge
-> tests pass, but no on-chain deployment yet (deploying to Arc Testnet
-> on Day 4 of the Agora Agents Hackathon). No SDK, no UI, no external
-> reviews. The pitch: AI agents on Arc need a way to *raise* and *manage*
-> external capital — currently they don't have one. Plinth is that primitive.
+### v0 on Arc Testnet
+
+| Contract | Address | Deploy tx |
+|---|---|---|
+| **Plinth** | [`0xc2994ce3df612ebd2f898244a992a0bbfef86627`](https://testnet.arcscan.app/address/0xc2994ce3df612ebd2f898244a992a0bbfef86627) | [`0xe10e704a...`](https://testnet.arcscan.app/tx/0xe10e704a6b7240095b74518da5e94ae3086237dd71ff05f2fbc52cfd615fe583) |
+| **MockVenue #1** (placeholder execution venue) | [`0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd`](https://testnet.arcscan.app/address/0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd) | [`0x62e48b43...`](https://testnet.arcscan.app/tx/0x62e48b43311e339e2193b138e5e4a71cb65e97d725b0b89d4b3900fd16964bca) |
+| **MockVenue #2** (placeholder execution venue) | [`0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35`](https://testnet.arcscan.app/address/0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35) | [`0x85b612e2...`](https://testnet.arcscan.app/tx/0x85b612e25177985922e546366c67bd63b64c944c50c9226238c71d93b2574e4d) |
+
+Deployed gas: 2.12M (~0.085 USDC at 40 gwei).
+
+> **Read this first.** Plinth v0 is live on Arc Testnet but **no SDK yet**
+> and **no real-money lifecycle has been run by a 3rd-party agent**. 52
+> forge tests pass + audit pending. The pitch: AI agents on Arc need a
+> way to *raise* and *manage* external capital — currently they don't
+> have one. Plinth is that primitive.
 
 ---
 

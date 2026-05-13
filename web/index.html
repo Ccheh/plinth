@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Plinth — capital layer for AI trading agents on Arc</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  :root {
+    --bg: #0f1221;
+    --bg2: #161a2e;
+    --fg: #ebebf0;
+    --dim: #aab1c8;
+    --accent: #ffc850;
+    --highlight: #6ec8ff;
+    --green: #6edca8;
+    --red: #eb7070;
+    --border: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header { padding: 32px 40px; border-bottom: 1px solid var(--border); }
+  header h1 { margin: 0 0 6px 0; font-size: 28px; }
+  header p.tag { color: var(--dim); margin: 0; }
+  header .meta { color: var(--dim); font-size: 12px; margin-top: 12px; font-family: ui-monospace, monospace; }
+  header a { color: var(--highlight); text-decoration: none; }
+  main { padding: 24px 40px 80px; max-width: 1200px; margin: 0 auto; }
+  h2 { font-size: 18px; margin: 32px 0 12px; }
+  .row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  button { background: var(--bg2); color: var(--fg); border: 1px solid var(--border); padding: 8px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #1a1a2e; font-weight: 600; border-color: var(--accent); }
+  input { background: var(--bg2); color: var(--fg); border: 1px solid var(--border); padding: 8px 10px; border-radius: 6px; font: inherit; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { font-size: 12px; text-transform: uppercase; color: var(--dim); letter-spacing: 0.5px; }
+  td.mono { font-family: ui-monospace, monospace; font-size: 13px; }
+  td a { color: var(--highlight); text-decoration: none; }
+  .pill { padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .pill-active { background: rgba(110, 220, 168, 0.15); color: var(--green); }
+  .pill-paused { background: rgba(255, 200, 80, 0.15); color: var(--accent); }
+  .pill-closed { background: rgba(235, 112, 112, 0.15); color: var(--red); }
+  .vault-detail { background: var(--bg2); padding: 20px; border-radius: 8px; margin-top: 16px; border: 1px solid var(--border); }
+  .vault-detail .strategy { font-style: italic; color: var(--dim); padding: 8px 12px; border-left: 2px solid var(--accent); margin: 8px 0 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat { background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 6px; }
+  .stat .label { font-size: 11px; color: var(--dim); text-transform: uppercase; }
+  .stat .val { font-size: 18px; margin-top: 4px; font-family: ui-monospace, monospace; }
+  .stat .val.green { color: var(--green); }
+  .stat .val.red { color: var(--red); }
+  .actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .reviews { margin-top: 16px; }
+  .review { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 6px; margin-bottom: 8px; }
+  .review .by { font-size: 12px; color: var(--dim); }
+  .review pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; color: var(--fg); margin: 6px 0 0; }
+  .info { color: var(--dim); font-size: 13px; }
+  .err { color: var(--red); font-size: 13px; }
+  .ok { color: var(--green); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Plinth</h1>
+  <p class="tag">Capital layer for AI trading agents on Arc. Browse vaults, deposit USDC, redeem at NAV.</p>
+  <div class="meta">
+    Plinth contract: <a id="plinthLink" target="_blank" rel="noopener">0xc2994ce3df612ebd2f898244a992a0bbfef86627</a><br>
+    Chain: Arc Testnet (chainId 5042002) · <span id="rpcStatus" class="info">connecting…</span>
+  </div>
+</header>
+
+<main>
+  <h2>Vaults</h2>
+  <div class="row">
+    <button id="refreshBtn">Refresh</button>
+    <span class="info" id="vaultsInfo">scanning…</span>
+  </div>
+
+  <table id="vaultsTable">
+    <thead>
+      <tr>
+        <th>Vault ID</th>
+        <th>Agent</th>
+        <th>Strategy</th>
+        <th>Status</th>
+        <th>Total Shares</th>
+        <th>NAV</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="vaultsBody"><tr><td colspan="7" class="info">loading…</td></tr></tbody>
+  </table>
+
+  <div id="detailContainer"></div>
+</main>
+
+<script type="module">
+import {
+  createPublicClient, defineChain, http, parseAbiItem, decodeEventLog, formatEther, keccak256, toBytes,
+} from "https://esm.sh/viem@2.48.11";
+
+const PLINTH = "0xc2994ce3df612ebd2f898244a992a0bbfef86627";
+const RPC = "https://rpc.testnet.arc.network";
+const EXPLORER = "https://testnet.arcscan.app";
+
+const arc = defineChain({
+  id: 5042002, name: "Arc Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  rpcUrls: { default: { http: [RPC] } },
+});
+const client = createPublicClient({ chain: arc, transport: http(RPC, { timeout: 60_000 }) });
+
+const PLINTH_ABI = [
+  { type:"function", name:"vaults", stateMutability:"view", inputs:[{type:"bytes32"}],
+    outputs:[
+      {name:"agent",type:"address"},{name:"createdAt",type:"uint64"},{name:"status",type:"uint8"},
+      {name:"totalShares",type:"uint256"},{name:"inVault",type:"uint256"},{name:"deployedAUM",type:"uint256"},
+      {name:"reportedPnL",type:"int256"},{name:"strategyDescriptor",type:"string"},
+    ]},
+  { type:"function", name:"nav", stateMutability:"view", inputs:[{type:"bytes32"}], outputs:[{type:"uint256"}] },
+  { type:"function", name:"getApprovedVenues", stateMutability:"view", inputs:[{type:"bytes32"}], outputs:[{type:"address[]"}] },
+];
+
+document.getElementById("plinthLink").href = `${EXPLORER}/address/${PLINTH}`;
+
+function shortHex(s, h=10, t=6) { if (!s) return ""; return s.slice(0, h) + "…" + s.slice(-t); }
+function fmtUsdc(wei, decimals=6) {
+  if (typeof wei !== "bigint") wei = BigInt(wei);
+  const neg = wei < 0n; const abs = neg ? -wei : wei;
+  const whole = abs / 10n**18n;
+  let frac = (abs % 10n**18n).toString().padStart(18, "0").slice(0, decimals).replace(/0+$/, "");
+  return (neg ? "-" : "") + whole + (frac ? "." + frac : "");
+}
+function statusPill(s) {
+  if (s === 1) return `<span class="pill pill-active">Active</span>`;
+  if (s === 2) return `<span class="pill pill-paused">Paused</span>`;
+  if (s === 3) return `<span class="pill pill-closed">Closed</span>`;
+  return s;
+}
+
+async function findVaultEvents() {
+  const latest = await client.getBlockNumber();
+  // Arc Testnet caps eth_getLogs at 10k blocks. Walk back in chunks.
+  const CHUNK = 9_900n;
+  const event = parseAbiItem("event VaultCreated(bytes32 indexed vaultId, address indexed agent, address[] approvedVenues, string strategyDescriptor, uint256 initialDeposit)");
+  const all = [];
+  for (let i = 0; i < 3; i++) {  // last ~30k blocks
+    const to = latest - BigInt(i) * CHUNK;
+    const from = to > CHUNK ? to - CHUNK : 0n;
+    const logs = await client.getLogs({ address: PLINTH, event, fromBlock: from, toBlock: to });
+    all.push(...logs);
+    if (from === 0n) break;
+  }
+  // Dedup by vaultId, keep first (chronologically earliest)
+  const seen = new Set();
+  return all.filter(l => {
+    const id = l.topics[1];
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+async function loadVaults() {
+  document.getElementById("vaultsInfo").textContent = "scanning…";
+  let logs = [];
+  try {
+    logs = await findVaultEvents();
+    document.getElementById("rpcStatus").innerHTML = `<span class="ok">connected, latest block ${await client.getBlockNumber()}</span>`;
+  } catch (e) {
+    document.getElementById("rpcStatus").innerHTML = `<span class="err">RPC error: ${e.message.slice(0, 80)}</span>`;
+    return;
+  }
+
+  const tbody = document.getElementById("vaultsBody");
+  if (logs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="info">No vaults found in the last ~30,000 blocks.</td></tr>`;
+    document.getElementById("vaultsInfo").textContent = "0 vaults";
+    return;
+  }
+
+  // Fetch live state for each
+  const rows = [];
+  for (const l of logs) {
+    const decoded = decodeEventLog({ abi: [parseAbiItem("event VaultCreated(bytes32 indexed vaultId, address indexed agent, address[] approvedVenues, string strategyDescriptor, uint256 initialDeposit)")], data: l.data, topics: l.topics });
+    const vaultId = decoded.args.vaultId;
+    try {
+      const [agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor] = await client.readContract({
+        address: PLINTH, abi: PLINTH_ABI, functionName: "vaults", args: [vaultId],
+      });
+      const nav = await client.readContract({
+        address: PLINTH, abi: PLINTH_ABI, functionName: "nav", args: [vaultId],
+      });
+      rows.push({ vaultId, agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor, nav, blockNumber: l.blockNumber, txHash: l.transactionHash });
+    } catch {/* skip broken */}
+  }
+
+  document.getElementById("vaultsInfo").textContent = `${rows.length} vault(s)`;
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="mono"><a href="${EXPLORER}/tx/${r.txHash}" target="_blank">${shortHex(r.vaultId)}</a></td>
+      <td class="mono">${shortHex(r.agent, 8, 4)}</td>
+      <td>${r.strategyDescriptor.slice(0, 50)}${r.strategyDescriptor.length > 50 ? "…" : ""}</td>
+      <td>${statusPill(r.status)}</td>
+      <td class="mono">${fmtUsdc(r.totalShares)}</td>
+      <td class="mono">${fmtUsdc(r.nav)} USDC</td>
+      <td><button onclick="window.showDetail('${r.vaultId}')">Detail</button></td>
+    </tr>
+  `).join("");
+  window._vaults = rows;
+}
+
+window.showDetail = async function(vaultId) {
+  const r = window._vaults.find(v => v.vaultId === vaultId);
+  if (!r) return;
+  const venues = await client.readContract({ address: PLINTH, abi: PLINTH_ABI, functionName: "getApprovedVenues", args: [vaultId] });
+  const totalAUM = r.inVault + r.deployedAUM + r.reportedPnL;
+  const pnlClass = r.reportedPnL > 0n ? "green" : r.reportedPnL < 0n ? "red" : "";
+
+  // Reviews
+  const latest = await client.getBlockNumber();
+  const reviewEvent = parseAbiItem("event UnderwriterReviewPosted(bytes32 indexed vaultId, address indexed underwriter, bytes32 reviewHash, string reviewUri)");
+  const fromBlock = latest > 9_900n ? latest - 9_900n : 0n;
+  let reviews = [];
+  try {
+    const logs = await client.getLogs({ address: PLINTH, event: reviewEvent, args: { vaultId }, fromBlock });
+    reviews = logs.map(l => decodeEventLog({ abi:[reviewEvent], data:l.data, topics:l.topics }).args)
+      .map((a, i) => ({ ...a, blockNumber: logs[i].blockNumber, txHash: logs[i].transactionHash }));
+  } catch {}
+
+  const container = document.getElementById("detailContainer");
+  container.innerHTML = `
+    <div class="vault-detail">
+      <h2 style="margin-top:0">Vault ${shortHex(r.vaultId)}</h2>
+      <div class="strategy">${r.strategyDescriptor}</div>
+      <div class="info">Agent: <a class="mono" href="${EXPLORER}/address/${r.agent}" target="_blank">${r.agent}</a></div>
+      <div class="info">Approved venues: ${venues.map(v => `<a class="mono" href="${EXPLORER}/address/${v}" target="_blank">${shortHex(v, 8, 4)}</a>`).join(", ")}</div>
+      <div class="stats" style="margin-top:16px">
+        <div class="stat"><div class="label">Status</div><div class="val">${statusPill(r.status)}</div></div>
+        <div class="stat"><div class="label">Total Shares</div><div class="val">${fmtUsdc(r.totalShares)}</div></div>
+        <div class="stat"><div class="label">NAV</div><div class="val">${fmtUsdc(r.nav)}</div></div>
+        <div class="stat"><div class="label">In Vault (liquid)</div><div class="val">${fmtUsdc(r.inVault)} USDC</div></div>
+        <div class="stat"><div class="label">Deployed AUM</div><div class="val">${fmtUsdc(r.deployedAUM)} USDC</div></div>
+        <div class="stat"><div class="label">Reported PnL</div><div class="val ${pnlClass}">${fmtUsdc(r.reportedPnL)} USDC</div></div>
+        <div class="stat"><div class="label">Total AUM</div><div class="val">${fmtUsdc(totalAUM)} USDC</div></div>
+      </div>
+
+      <div class="actions">
+        <h3 style="margin-top:0">Deposit / Redeem</h3>
+        <p class="info">Web UI is read-only in v0 — connect a wallet on Arc Testnet and call the contract directly (or use the @plinth/sdk TypeScript client).</p>
+        <p class="info">Contract: <a class="mono" href="${EXPLORER}/address/${PLINTH}" target="_blank">${PLINTH}</a></p>
+      </div>
+
+      <div class="reviews">
+        <h3>Underwriter Reviews (${reviews.length})</h3>
+        ${reviews.length === 0 ? '<p class="info">No reviews posted in the last ~10k blocks.</p>' : ''}
+        ${reviews.map(rv => `
+          <div class="review">
+            <div class="by">by <a href="${EXPLORER}/address/${rv.underwriter}" target="_blank">${shortHex(rv.underwriter, 8, 4)}</a>
+              · block ${rv.blockNumber}
+              · hash <code>${shortHex(rv.reviewHash)}</code>
+              · <a href="${EXPLORER}/tx/${rv.txHash}" target="_blank">tx</a>
+            </div>
+            <pre>${decodeReviewUri(rv.reviewUri)}</pre>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+  container.scrollIntoView({ behavior: "smooth" });
+};
+
+function decodeReviewUri(uri) {
+  if (uri.startsWith("data:application/json;base64,")) {
+    try {
+      const b64 = uri.slice("data:application/json;base64,".length);
+      return atob(b64);
+    } catch { return uri.slice(0, 200) + "…"; }
+  }
+  return uri;
+}
+
+document.getElementById("refreshBtn").addEventListener("click", loadVaults);
+loadVaults();
+</script>
+</body>
+</html>
