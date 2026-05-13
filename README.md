@@ -19,7 +19,11 @@
 | **MockVenue #1** (placeholder execution venue) | [`0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd`](https://testnet.arcscan.app/address/0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd) | [`0x62e48b43...`](https://testnet.arcscan.app/tx/0x62e48b43311e339e2193b138e5e4a71cb65e97d725b0b89d4b3900fd16964bca) |
 | **MockVenue #2** (placeholder execution venue) | [`0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35`](https://testnet.arcscan.app/address/0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35) | [`0x85b612e2...`](https://testnet.arcscan.app/tx/0x85b612e25177985922e546366c67bd63b64c944c50c9226238c71d93b2574e4d) |
 
-Deployed gas: 2.12M (~0.085 USDC at 40 gwei). **Web UI live at https://ccheh.github.io/plinth/**
+Deployed gas: 2.12M (~0.085 USDC at 40 gwei).
+
+- **Web UI**: https://ccheh.github.io/plinth/
+- **Pitch video**: [demo.mp4 (2.5 min)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4)
+- **Submission one-pager**: [docs/submission.md](docs/submission.md)
 
 ### Live vaults (as of submission)
 
