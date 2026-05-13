@@ -1,6 +1,9 @@
 """
-Composes the final Plinth pitch video: TTS narration + slide images.
-Same pattern as the previous Ignyte hackathon submission, retuned for Plinth.
+Composes the Plinth pitch video (v2, post-audit edition).
+
+  - Voice: en-US-BrianMultilingualNeural (more conversational than Andrew)
+  - Pacing: -6% rate, inline <break time="..."/> SSML for natural pauses
+  - 10 slides matching the v2 generate_slides.py output
 
 Output: D:\\桌面\\arc\\plinth\\video\\demo.mp4
 """
@@ -16,93 +19,101 @@ SLIDE_DIR = OUT_DIR / "slides"
 AUDIO_DIR = OUT_DIR / "audio"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
-VOICE = "en-US-AndrewMultilingualNeural"
-RATE = "-3%"
+# en-US-BrianMultilingualNeural reads as a relaxed mid-tone male voice — more
+# natural for spoken-word pitches than the precise Andrew voice we used in v1.
+# Slowed slightly to give the inline <break> tags room to breathe.
+VOICE = "en-US-BrianMultilingualNeural"
+RATE = "-6%"
 VOLUME = "+0%"
 
-# Conversational scripts — em-dashes for natural pauses, contractions,
-# pronouncing addresses as digits is awful so we paraphrase.
+# Edge-TTS doesn't honor inline <break> SSML tags — it reads them as text.
+# So we use natural punctuation for pauses:
+#   ...      → ~600ms pause, audible "trailing off" effect
+#   —        → ~400ms emphatic pause
+#   ,        → ~150ms breath pause
+#   .        → ~350ms sentence boundary
+#
+# Scripts are also kept short — target ~25-30 seconds per slide, ~3.5 min total.
+# Conversational voice (contractions, "Here's the thing", asides) → more natural
+# than dense formal prose.
+
 SCRIPTS = [
-    # 01 — title (~7s)
-    "So... let me show you Plinth. "
-    "A capital layer for AI trading agents on Arc, "
-    "submitted to the Agora Agents Hackathon.",
+    # 01 — title (~7s, ~17w)
+    "Plinth. A capital layer for AI trading agents on Arc. "
+    "Built for the Agora Agents Hackathon.",
 
-    # 02 — problem (~16s)
-    "Here's the problem. AI trading agents have a structural ceiling. "
-    "They run on the agent's own balance — maybe a hundred USDC of testnet money. "
-    "There's no on-chain primitive to raise capital, manage shares, "
-    "or constrain the agent's authority over investor funds. "
-    "Result: most agent demos can't scale past their seed budget. "
-    "Real capital won't trust them.",
+    # 02 — problem (~18s, ~45w)
+    "AI trading agents have a trust problem. "
+    "They run on their own balance. "
+    "Taking outside money needs fund wrappers, custody, "
+    "and a way for investors to verify reported returns. "
+    "The standard answer: there isn't one. "
+    "Agents claim a number — investors believe it.",
 
-    # 03 — what is plinth (~20s)
-    "So... what Plinth is. It's hedge fund infrastructure for AI trading agents on Arc. "
-    "Agent creates a vault with an immutable whitelist of approved venues. "
-    "Anyone deposits USDC, receives shares at the current NAV. "
-    "Agent deploys vault capital — but only to the whitelisted venues. "
-    "Agent reports PnL, the share price updates, "
-    "investors can redeem at the new NAV at any time. "
-    "The key constraint: the agent can never transfer pool funds to addresses outside the approved list.",
+    # 03 — what is plinth (~22s, ~55w)
+    "Plinth solves it on chain. "
+    "The agent creates a vault with an immutable list of approved venues. "
+    "Anyone deposits USDC, gets shares at NAV, redeems on demand. "
+    "The agent directs funds — but can never withdraw to a new address. "
+    "And anyone can be an underwriter: "
+    "post a signed review on chain. Multiple per vault, by design.",
 
-    # 04 — mechanism (~22s)
-    "Here's how NAV works. Total AUM equals USDC in the vault, plus USDC deployed to venues, plus the agent's reported PnL. "
-    "NAV is total AUM divided by outstanding shares. "
-    "Walk through an example. "
-    "Day one — agent deposits five tenths of a USDC, gets five tenths of a share. NAV starts at one. "
-    "Day two — investor deposits zero point oh oh three USDC at NAV one. Investor gets zero point oh oh three shares. "
-    "Day three — agent reports plus three tenths of a USDC PnL. NAV jumps to one point three seven five. "
-    "Day four — investor redeems half their shares. They get back zero point oh oh two zero six USDC. "
-    "All of this actually ran on Arc Testnet earlier today.",
+    # 04 — NAV (~22s, ~55w)
+    "NAV is simple. Total assets divided by total shares. "
+    "Total assets equals USDC in the vault, plus USDC at venues, plus reported PnL. "
+    "Concretely — from a real run today: "
+    "agent deposits one millicent. Investor deposits ten times that. "
+    "Agent reports a real Aster L1 trade. "
+    "NAV updates. Investor redeems on chain. All verifiable.",
 
-    # 05 — live evidence (~22s)
-    "Live on Arc Testnet right now. Plinth contract deployed, four vaults active, "
-    "eight lifecycle transactions on chain. "
-    "Vault one is the full lifecycle — BTC perp momentum strategy, NAV moved from one to one point three seven five. "
-    "Vault two — ETH mean reversion, two depositors, seven thousandths of a USDC of TVL. "
-    "Vault three — SOL perp grid bot, deployed two thousandths, agent reported plus one thousandth of a USDC PnL. "
-    "Vault four — multi-asset arbitrage, fresh, awaiting depositors. "
-    "Plus... two underwriter reviews on chain — auditable risk attestations. "
-    "Everything is verifiable on testnet.arcscan.app. "
-    "And there's a live web UI at ccheh.github.io slash plinth.",
+    # 05 — verifiable PnL (~26s, ~70w) — the killer feature
+    "Here's what's different. "
+    "When the venue is also a public chain — agents can't lie about PnL. "
+    "On Arc: claim minus zero point oh four seven USDC. "
+    "On Aster L1: a real BTC perp. "
+    "Open at eighty thousand five hundred. Close three minutes later at eighty thousand five seventeen. "
+    "After fees — net minus zero point oh four seven USDT. "
+    "The underwriter pulls Aster's trade history, reconciles, "
+    "delta zero point zero zero percent. Verified on chain. "
+    "By code, not by trust.",
 
-    # 06 — circle / arc fit (~18s)
-    "Why this fits Arc specifically. "
-    "USDC as native gas means a single transaction does deposit and redeem. "
-    "Sub-cent settlement means small-share economics actually work — "
-    "a fifty cent redeem isn't eaten by gas fees. "
-    "L1 finality means a deposit at NAV one point five is final — "
-    "no chain reorg can rewrite the share count. "
-    "And the compliance interfaces Circle is building at L1 — "
-    "they're exactly what institutional vault adoption will need next.",
+    # 06 — multi underwriter (~20s, ~50w)
+    "Same vault, four reviews, two signing addresses. "
+    "The Aster Verifier says verified. Agent is honest. "
+    "The Risk Monitor says critical. Position is underwater. "
+    "An LLM rates the strategy. A fourth reviewer — separate address — adds a human note. "
+    "Investors pick whose lens to weight. "
+    "Honest reporting plus real risk is exactly when investors need a warning.",
 
-    # 07 — innovation (~22s)
-    "What's different about Plinth. "
-    "It's a capability constraint, not a custody constraint. The agent never holds the keys — "
-    "but does direct the funds. The whitelist is immutable. "
-    "There's an Underwriter Agent — an LLM that reads each vault's strategy descriptor "
-    "plus on-chain state, outputs a structured risk review, "
-    "and commits the review hash on chain. "
-    "Sub-cent shares — MIN_DEPOSIT is one ten-thousandth of a USDC. "
-    "Retail-sized capital can diversify across AI strategies. "
-    "And it composes with the existing agent economy stack — "
-    "Mandate, Cadence, Crucible, Helm. Plinth is the capital layer.",
+    # 07 — security audit + v0.5 (~24s, ~60w)
+    "Security mattered. Pre-deployment self-audit found eleven findings. "
+    "The critical one — a sandwich attack on reportPnL. "
+    "Attacker front-runs a deposit at old NAV, redeems at new — drains other shareholders. "
+    "For every critical and high, we wrote an exploit POC, proved it works on v zero, "
+    "then deployed v zero point five with the fix. "
+    "Ninety forge tests pass. The defense is live on chain.",
 
-    # 08 — honest limits (~18s)
-    "Honest limits. Plinth is version zero — pre-audit, pre-mainnet. "
-    "Fifty two forge tests pass and Slither shows no high or medium findings. "
-    "But no external review yet. "
-    "No production adopters — the bet is that trading agent teams need this primitive. "
-    "Agent-reported PnL is trust-based in version zero. "
-    "Version zero point two will add stake-slashing for honesty. "
-    "And the agent could list themselves as an approved venue — "
-    "that's an intentionally Underwriter-detectable failure mode, "
-    "flagged off-chain as a critical risk by the LLM reviewer.",
+    # 08 — live evidence (~18s, ~45w)
+    "What's live. Six vaults on chain. "
+    "Seven underwriter reviews. "
+    "Three real BTC perps on Aster L1 mainnet. "
+    "Total experimental cost: thirteen cents. "
+    "For thirteen cents — a complete proof on the explorer. "
+    "And an interactive demo at verify dot html — reconciliation runs in your browser.",
 
-    # 09 — closing (~8s)
-    "That's Plinth. Open source, MIT licensed, no admin keys. "
-    "Github dot com slash Ccheh slash plinth. "
-    "Try it, push back, integrate it. Thanks for watching.",
+    # 09 — Arc fit + Aster framing (~22s, ~55w)
+    "Why Arc. USDC is native gas. "
+    "Sub-cent settlement makes small shares viable. "
+    "L1 finality. USYC and CCTP on the roadmap. "
+    "About Aster: we picked it as the v zero demo target "
+    "because its chain is public — exactly what the Verifier needs. "
+    "The pattern works for any public-chain perp, "
+    "including future Arc-native ones. Aster is the demo target. Plinth is the product.",
+
+    # 10 — closing (~9s, ~25w)
+    "That's Plinth. Open source. MIT. No admin keys. Pre-deployment audit complete. "
+    "Fifteen-minute integration guide for agent teams. "
+    "Github dot com slash Ccheh slash plinth. Thanks for watching.",
 ]
 
 

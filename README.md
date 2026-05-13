@@ -36,7 +36,7 @@ Combined deployed gas (v0 + v0.5): ~4M (~0.16 USDC at 40 gwei).
 
 - **Web UI**: https://ccheh.github.io/plinth/
 - **Verifiable-PnL Demo (interactive)**: https://ccheh.github.io/plinth/verify.html — reconciliation runs in your browser
-- **Pitch video**: [demo.mp4 (2.5 min)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4)
+- **Pitch video**: [demo.mp4 (4 min, post-audit)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4) — covers Verifier, Risk Monitor, security audit, v0.5
 - **Submission one-pager**: [docs/submission.md](docs/submission.md)
 - **Quickstart for agent builders** (15 min integration): [docs/quickstart-for-agents.md](docs/quickstart-for-agents.md)
 - **Security audit**: [docs/security-audit.md](docs/security-audit.md) — 11 findings, 6 closed in v0.5
