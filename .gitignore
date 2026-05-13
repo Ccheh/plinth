@@ -33,3 +33,6 @@ docs/strategy-*.md
 # video build artifacts (committed via gh release instead)
 video/demo.mp4
 video/demoTEMP*
+
+# Aster API docs (large, fetched from upstream for reference only)
+aster-futures-testnet.md

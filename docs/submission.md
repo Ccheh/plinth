@@ -6,6 +6,8 @@
 
 **Plinth is the capital layer that lets AI trading agents on Arc raise external USDC from investors and manage it under hard on-chain constraints.** It turns a single-wallet agent demo into a tokenized fund: agent creates a vault, anyone deposits USDC at NAV, agent deploys to a pre-declared immutable whitelist of venues, NAV moves on reported PnL, investors redeem on demand.
 
+**v0 ships with a cross-chain verifiable-PnL Underwriter.** When an agent's strategy executes on a public-chain venue (Aster L1 in our demo; future Arc-native perp DEXes by the same pattern), Plinth's Underwriter reads the venue's trade history and cryptographically reconciles it against the agent's reported PnL on Arc. Vault #5 ran end-to-end on Aster mainnet: agent opened 0.001 BTC long → closed 3 min later → realized PnL `−0.047207 USDT` → reported same value on Arc → Underwriter matched to 0.00% delta → posted `VERIFIED` review on chain. This turns the honest-limit "agent self-reports PnL → trust required" into "PnL is recomputable from venue chain."
+
 ## How this addresses the RFB themes
 
 The Agora brief covered 6 RFBs around trading agents (RFB 1: perp futures, RFB 2: prediction markets, RFB 4: portfolio management, RFB 5: arbitrage, RFB 6: social trading). **Plinth is orthogonal-but-essential infrastructure for all of them.** Every trading agent on Arc has the same structural ceiling: they run on their own balance. Plinth removes that ceiling by giving the agent a way to safely take on external capital.
@@ -19,10 +21,10 @@ Concretely, an RFB 2 prediction-market team using Plinth gets:
 
 | Criterion | Weight | Plinth's claim |
 |---|---|---|
-| **Agentic Sophistication** | 30% | LLM Underwriter Agent reads vault metadata + on-chain history, outputs structured risk reviews, posts hash on chain. NAV math, capability constraints, and audit-trail events all live in Solidity. |
-| **Traction** | 30% | **4 vaults live on Arc Testnet at submission time, 11 lifecycle transactions on chain, 2 underwriter reviews on chain.** Web UI at ccheh.github.io/plinth lets anyone browse + verify. Outreach kit ready for Canteen Discord — hackathon teams can integrate in ~15 minutes. |
+| **Agentic Sophistication** | 30% | Two distinct Underwriter agents: (a) LLM-based risk reviewer reads vault metadata + on-chain history and outputs structured risk assessments; (b) **Verifiable-PnL Underwriter** independently reconciles the agent's reported PnL against the venue's own on-chain trade history. Vault #5 ran end-to-end: a real BTC perp on Aster L1, agent reports realized PnL on Arc, Underwriter matches to 0.00% delta and posts `VERIFIED` review on chain. |
+| **Traction** | 30% | **5 vaults live on Arc Testnet, 16+ lifecycle transactions on chain, 3 underwriter reviews on chain (1 cryptographically verified against a real Aster L1 trade)**. Web UI at ccheh.github.io/plinth lets anyone browse + verify. Outreach kit ready for Canteen Discord — hackathon teams can integrate in ~15 minutes. |
 | **Circle Tool Usage** | 20% | Built on **Arc Testnet with USDC as native gas**. MIN_DEPOSIT is 0.0001 USDC (only viable on Arc's economics). v0.2 will integrate **USYC** (Circle's tokenized T-bills) for idle USDC yield, and **Cadence** (the OSS Nanopayments reference) for management fee streaming. |
-| **Innovation** | 20% | (a) Capability-not-custody constraint: agent never holds keys but directs funds. (b) Sub-cent share economics — retail-sized capital diversifying across AI strategies, only possible on Arc. (c) On-chain Underwriter Agent layer — the first auditable reputation primitive for AI fund managers I'm aware of. (d) Composes with 4 sibling protocols (Mandate, Cadence, Crucible, Helm) into a complete agent-economy stack. |
+| **Innovation** | 20% | (a) **Verifiable-PnL Underwriter** — when the off-chain venue is itself a public chain, the Underwriter cryptographically reconciles agent claims against venue trade history (live demo on Aster L1, same pattern applies to any future Arc-native perp DEX). (b) Capability-not-custody constraint: agent never holds keys but directs funds. (c) Sub-cent share economics — retail-sized capital diversifying across AI strategies, only possible on Arc. (d) Composes with 4 sibling protocols (Mandate, Cadence, Crucible, Helm) into a complete agent-economy stack. |
 
 ## Deliverables (matching submission checklist)
 
