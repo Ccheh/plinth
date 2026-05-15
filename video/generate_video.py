@@ -1,154 +1,207 @@
 """
-Composes the Plinth pitch video (v2, post-audit edition).
+Composes the Plinth pitch video (v4 — natural-pacing edition).
 
-  - Voice: en-US-BrianMultilingualNeural (more conversational than Andrew)
-  - Pacing: -6% rate, inline <break time="..."/> SSML for natural pauses
-  - 10 slides matching the v2 generate_slides.py output
+Key change vs v3: each script slide is split into individual sentences, each
+sentence is synthesized separately, then concatenated with controlled-duration
+silence between them. This gives the audio a more human cadence than a single
+TTS call per slide.
 
-Output: D:\\桌面\\arc\\plinth\\video\\demo.mp4
+Per-sentence pause durations:
+  short (~250ms): comma-level breath between closely-related clauses
+  mid   (~450ms): standard sentence boundary
+  long  (~700ms): paragraph break / dramatic emphasis
+  beat  (~900ms): slide transition / setup-payoff
+
+Voice: en-US-AndrewMultilingualNeural — multilingual voice with good prosody
+for English narration. Slowed -4% for clarity without sounding mechanical.
+
+Output: D:\\桌面\\arc\\plinth\\video\\demo.mp4 (target ~3 min)
 """
 
 import asyncio
+import subprocess
 from pathlib import Path
 
 import edge_tts
+import imageio_ffmpeg
 from moviepy import AudioFileClip, ImageClip, concatenate_videoclips
+
+FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 OUT_DIR = Path(r"D:\桌面\arc\plinth\video")
 SLIDE_DIR = OUT_DIR / "slides"
 AUDIO_DIR = OUT_DIR / "audio"
+SENT_DIR  = OUT_DIR / "audio_sent"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+SENT_DIR.mkdir(parents=True, exist_ok=True)
 
-# en-US-BrianMultilingualNeural reads as a relaxed mid-tone male voice — more
-# natural for spoken-word pitches than the precise Andrew voice we used in v1.
-# Slowed slightly to give the inline <break> tags room to breathe.
-VOICE = "en-US-BrianMultilingualNeural"
-RATE = "-6%"
-VOLUME = "+0%"
+VOICE = "en-US-AndrewMultilingualNeural"
+RATE  = "-4%"
 
-# Edge-TTS doesn't honor inline <break> SSML tags — it reads them as text.
-# So we use natural punctuation for pauses:
-#   ...      → ~600ms pause, audible "trailing off" effect
-#   —        → ~400ms emphatic pause
-#   ,        → ~150ms breath pause
-#   .        → ~350ms sentence boundary
-#
-# Scripts are also kept short — target ~25-30 seconds per slide, ~3.5 min total.
-# Conversational voice (contractions, "Here's the thing", asides) → more natural
-# than dense formal prose.
-
+# Each slide is a list of (sentence, pause_after_ms) tuples. Tightened to fit
+# 3-minute target. Average pause ~250ms, with longer beats only at key moments.
 SCRIPTS = [
-    # 01 — title (~7s, ~17w)
-    "Plinth. A capital layer for AI trading agents on Arc. "
-    "Built for the Agora Agents Hackathon.",
+    # ─── 01: Title (~7s) ───
+    [
+        ("Plinth.",                                                        500),
+        ("The capital layer for AI trading agents on Arc.",                 400),
+    ],
 
-    # 02 — problem (~18s, ~45w)
-    "AI trading agents have a trust problem. "
-    "They run on their own balance. "
-    "Taking outside money needs fund wrappers, custody, "
-    "and a way for investors to verify reported returns. "
-    "The standard answer: there isn't one. "
-    "Agents claim a number — investors believe it.",
+    # ─── 02: Problem (~14s) ───
+    [
+        ("AI trading agents have a trust problem.",                         300),
+        ("Taking outside money needs a fund wrapper, custody, and investors willing to take 'trust my returns' on faith.",  400),
+        ("When the agent reports PnL, how does anyone verify it?  Normally, you can't.",  500),
+    ],
 
-    # 03 — what is plinth (~22s, ~55w)
-    "Plinth solves it on chain. "
-    "The agent creates a vault with an immutable list of approved venues. "
-    "Anyone deposits USDC, gets shares at NAV, redeems on demand. "
-    "The agent directs funds — but can never withdraw to a new address. "
-    "And anyone can be an underwriter: "
-    "post a signed review on chain. Multiple per vault, by design.",
+    # ─── 03: What Plinth is (~18s) ───
+    [
+        ("Plinth solves this on chain.",                                    300),
+        ("The agent creates a vault with an immutable list of approved venues.",  300),
+        ("Anyone deposits USDC, gets shares at NAV, redeems on demand.",    300),
+        ("The agent directs capital, but can never withdraw to a new address.",  300),
+        ("And three independent underwriters post reviews on chain.",       400),
+    ],
 
-    # 04 — NAV (~22s, ~55w)
-    "NAV is simple. Total assets divided by total shares. "
-    "Total assets equals USDC in the vault, plus USDC at venues, plus reported PnL. "
-    "Concretely — from a real run today: "
-    "agent deposits one millicent. Investor deposits ten times that. "
-    "Agent reports a real Aster L1 trade. "
-    "NAV updates. Investor redeems on chain. All verifiable.",
+    # ─── 04: NAV math (very brief, ~6s) ───
+    [
+        ("NAV is simple — total assets divided by total shares.",           300),
+        ("Investors can always redeem at the current price.",               400),
+    ],
 
-    # 05 — verifiable PnL (~26s, ~70w) — the killer feature
-    "Here's what's different. "
-    "When the venue is also a public chain — agents can't lie about PnL. "
-    "On Arc: claim minus zero point oh four seven USDC. "
-    "On Aster L1: a real BTC perp. "
-    "Open at eighty thousand five hundred. Close three minutes later at eighty thousand five seventeen. "
-    "After fees — net minus zero point oh four seven USDT. "
-    "The underwriter pulls Aster's trade history, reconciles, "
-    "delta zero point zero zero percent. Verified on chain. "
-    "By code, not by trust.",
+    # ─── 05: Verifiable PnL — killer feature (~26s) ───
+    [
+        ("Here's what's different.",                                        300),
+        ("When the trading venue is also a public chain, the agent can't lie about PnL.",  400),
+        ("On Aster L1, the agent reports minus zero point oh four seven USDC.",  300),
+        ("The underwriter recomputes from on-chain trades and matches to zero point zero zero percent.",  400),
+        ("Verified by code, not by trust.",                                 400),
+    ],
 
-    # 06 — multi underwriter (~20s, ~50w)
-    "Same vault, four reviews, two signing addresses. "
-    "The Aster Verifier says verified. Agent is honest. "
-    "The Risk Monitor says critical. Position is underwater. "
-    "An LLM rates the strategy. A fourth reviewer — separate address — adds a human note. "
-    "Investors pick whose lens to weight. "
-    "Honest reporting plus real risk is exactly when investors need a warning.",
+    # ─── 06: Multi-underwriter + Composition (~20s) ───
+    [
+        ("Same vault. Four reviews. Two signing addresses.",                300),
+        ("Verifier says verified. Risk Monitor says critical. LLM rates medium risk.",  300),
+        ("A human reviewer adds a qualitative note.",                       350),
+        ("And the first on-chain sibling-protocol composition — Mandate authorizes Plinth deposits with cryptographic capability constraints.",  400),
+    ],
 
-    # 07 — security audit + v0.5 (~24s, ~60w)
-    "Security mattered. Pre-deployment self-audit found eleven findings. "
-    "The critical one — a sandwich attack on reportPnL. "
-    "Attacker front-runs a deposit at old NAV, redeems at new — drains other shareholders. "
-    "For every critical and high, we wrote an exploit POC, proved it works on v zero, "
-    "then deployed v zero point five with the fix. "
-    "Ninety forge tests pass. The defense is live on chain.",
+    # ─── 07: Security + Yield (~22s) ───
+    [
+        ("Pre-deployment audit found eleven issues — one critical sandwich attack on reportPnL.",  300),
+        ("We wrote exploit POCs and deployed v0.5 with fixes. Ninety-eight forge tests pass.",  400),
+        ("Plus a yield strategy — idle USDC sweeps at five percent APR.",   350),
+        ("Production path uses Circle's USYC on Base via CCTP.",            400),
+    ],
 
-    # 08 — live evidence (~18s, ~45w)
-    "What's live. Six vaults on chain. "
-    "Seven underwriter reviews. "
-    "Three real BTC perps on Aster L1 mainnet. "
-    "Total experimental cost: thirteen cents. "
-    "For thirteen cents — a complete proof on the explorer. "
-    "And an interactive demo at verify dot html — reconciliation runs in your browser.",
+    # ─── 08: Live evidence (very brief, ~10s) ───
+    [
+        ("On chain right now — seven vaults, three real BTC perps on Aster mainnet, one cross-protocol compose.",  350),
+        ("Total experimental cost: thirteen cents.",                        500),
+    ],
 
-    # 09 — Arc fit + Aster framing (~22s, ~55w)
-    "Why Arc. USDC is native gas. "
-    "Sub-cent settlement makes small shares viable. "
-    "L1 finality. USYC and CCTP on the roadmap. "
-    "About Aster: we picked it as the v zero demo target "
-    "because its chain is public — exactly what the Verifier needs. "
-    "The pattern works for any public-chain perp, "
-    "including future Arc-native ones. Aster is the demo target. Plinth is the product.",
+    # ─── 09: Arc fit + Aster framing (~14s) ───
+    [
+        ("Why Arc. USDC as native gas, sub-cent settlement, L1 finality.",  300),
+        ("Real Circle Bridge Kit SDK is integrated.",                       400),
+        ("Aster is the demo. Plinth is the product.",                       400),
+    ],
 
-    # 10 — closing (~9s, ~25w)
-    "That's Plinth. Open source. MIT. No admin keys. Pre-deployment audit complete. "
-    "Fifteen-minute integration guide for agent teams. "
-    "Github dot com slash Ccheh slash plinth. Thanks for watching.",
+    # ─── 10: Closing (~9s) ───
+    [
+        ("That's Plinth.",                                                  300),
+        ("Open source, MIT, no admin keys.  Pre-deployment audit complete.",  300),
+        ("Github dot com slash Ccheh slash plinth.",                        300),
+        ("Thanks for watching.",                                            200),
+    ],
 ]
 
 
-async def synth_one(text, out_path):
-    communicate = edge_tts.Communicate(text, VOICE, rate=RATE, volume=VOLUME)
-    await communicate.save(str(out_path))
+async def synth_sentence(text: str, out_path: Path):
+    c = edge_tts.Communicate(text, VOICE, rate=RATE)
+    await c.save(str(out_path))
 
 
-async def synth_all():
-    for i, text in enumerate(SCRIPTS, start=1):
-        path = AUDIO_DIR / f"narration_{i:02d}.mp3"
-        print(f"  [{i}/{len(SCRIPTS)}] {path.name}  ({len(text)} chars)")
-        await synth_one(text, path)
+async def synth_all_sentences():
+    """Generate one mp3 per sentence. Synthesizes in series to avoid edge-tts
+    rate limiting that surfaced during parallel attempts."""
+    total = sum(len(slide) for slide in SCRIPTS)
+    counter = 0
+    for slide_idx, slide in enumerate(SCRIPTS, start=1):
+        for sent_idx, (text, _) in enumerate(slide, start=1):
+            counter += 1
+            path = SENT_DIR / f"slide{slide_idx:02d}_sent{sent_idx:02d}.mp3"
+            # Skip if already generated (lets us resume after failures)
+            if path.exists() and path.stat().st_size > 1000:
+                print(f"  [{counter}/{total}] cached slide {slide_idx} sent {sent_idx}")
+                continue
+            await synth_sentence(text, path)
+            print(f"  [{counter}/{total}] slide {slide_idx} sent {sent_idx}: {text[:50]}", flush=True)
 
 
-print(f"Synthesizing {len(SCRIPTS)} narrations via {VOICE}...")
-asyncio.run(synth_all())
+def build_slide_audio_ffmpeg(slide_idx: int) -> Path:
+    """Concatenate sentence audios for a slide using ffmpeg's concat filter,
+    inserting `pause_after_ms` silence between sentences. Uses the bundled
+    imageio_ffmpeg binary (no system ffmpeg or ffprobe required)."""
+    slide = SCRIPTS[slide_idx - 1]
+    silence_dir = AUDIO_DIR / "silence"
+    silence_dir.mkdir(exist_ok=True)
 
-print("\nComposing video with audio...")
+    # Build the ffmpeg input list: alternating sentence + silence files
+    inputs = []
+    filter_parts = []
+    n_inputs = 0
+    for sent_idx, (_, pause_ms) in enumerate(slide, start=1):
+        sent_path = SENT_DIR / f"slide{slide_idx:02d}_sent{sent_idx:02d}.mp3"
+        inputs += ["-i", str(sent_path)]
+        filter_parts.append(f"[{n_inputs}:a]")
+        n_inputs += 1
+        if pause_ms > 0:
+            # Pre-generate silence file if absent
+            sil_path = silence_dir / f"silence_{pause_ms}ms.mp3"
+            if not sil_path.exists():
+                subprocess.run(
+                    [FFMPEG, "-y", "-f", "lavfi", "-i",
+                     f"anullsrc=channel_layout=mono:sample_rate=44100",
+                     "-t", f"{pause_ms/1000:.3f}", "-q:a", "9",
+                     str(sil_path)],
+                    capture_output=True, check=True,
+                )
+            inputs += ["-i", str(sil_path)]
+            filter_parts.append(f"[{n_inputs}:a]")
+            n_inputs += 1
+
+    concat_filter = "".join(filter_parts) + f"concat=n={n_inputs}:v=0:a=1[out]"
+    out_path = AUDIO_DIR / f"narration_{slide_idx:02d}.mp3"
+    subprocess.run(
+        [FFMPEG, "-y", *inputs, "-filter_complex", concat_filter,
+         "-map", "[out]", "-b:a", "128k", str(out_path)],
+        capture_output=True, check=True,
+    )
+    return out_path
+
+
+print(f"Synthesizing per-sentence audio via {VOICE}...")
+asyncio.run(synth_all_sentences())
+
+print("\nBuilding slide audio (pydub splice with controlled silence)...")
 slide_paths = sorted(SLIDE_DIR.glob("slide_*.png"))
 assert len(slide_paths) == len(SCRIPTS), f"slides={len(slide_paths)} scripts={len(SCRIPTS)}"
 
 clips = []
-total = 0.0
-for i, slide in enumerate(slide_paths, start=1):
-    audio_path = AUDIO_DIR / f"narration_{i:02d}.mp3"
-    audio_clip = AudioFileClip(str(audio_path))
-    dur = audio_clip.duration
-    img_clip = ImageClip(str(slide)).with_duration(dur).with_audio(audio_clip)
-    clips.append(img_clip)
+total_duration = 0.0
+for i, slide_png in enumerate(slide_paths, start=1):
+    slide_audio_path = build_slide_audio_ffmpeg(i)
+    loaded = AudioFileClip(str(slide_audio_path))
+    dur = loaded.duration
+    img = ImageClip(str(slide_png)).with_duration(dur).with_audio(loaded)
+    clips.append(img)
+    total_duration += dur
     print(f"  slide {i}: {dur:.1f}s")
-    total += dur
 
-print(f"\nTotal duration: {total:.1f}s = {total/60:.1f}min")
+print(f"\nTotal video duration: {total_duration:.1f}s = {total_duration/60:.2f} min")
 
+print("Composing video...")
 final = concatenate_videoclips(clips, method="compose")
 out_path = OUT_DIR / "demo.mp4"
 final.write_videofile(

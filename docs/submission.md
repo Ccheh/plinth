@@ -8,7 +8,7 @@
 
 **v0 ships with a cross-chain verifiable-PnL Underwriter.** When an agent's strategy executes on a public-chain venue (Aster L1 in our demo; future Arc-native perp DEXes by the same pattern), Plinth's Underwriter reads the venue's trade history and cryptographically reconciles it against the agent's reported PnL on Arc. Vault #5 ran end-to-end on Aster mainnet: agent opened 0.001 BTC long → closed 3 min later → realized PnL `−0.047207 USDT` → reported same value on Arc → Underwriter matched to 0.00% delta → posted `VERIFIED` review on chain. This turns the honest-limit "agent self-reports PnL → trust required" into "PnL is recomputable from venue chain."
 
-**v0.5 ships security-hardened.** Pre-deployment in-team audit ([`docs/security-audit.md`](security-audit.md)) identified 11 findings — 1 Critical (MEV sandwich on `reportPnL`), 2 High (`returnFromVenue` open access, `reportPnL` magnitude/rate unbounded), 3 Medium, 2 Low, 3 already-safe-by-design. Every Critical/High has a working exploit POC test (proving the v0 vuln) AND a defense test (proving v0.5 closes it). PlinthV05 deployed to Arc Testnet at `0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`. **90/90 forge tests pass** across both contracts.
+**v0.5 ships security-hardened.** Pre-deployment in-team audit ([`docs/security-audit.md`](security-audit.md)) identified 11 findings — 1 Critical (MEV sandwich on `reportPnL`), 2 High (`returnFromVenue` open access, `reportPnL` magnitude/rate unbounded), 3 Medium, 2 Low, 3 already-safe-by-design. Every Critical/High has a working exploit POC test (proving the v0 vuln) AND a defense test (proving v0.5 closes it). PlinthV05 deployed to Arc Testnet at `0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`. **98/98 forge tests pass** across all contracts (PlinthV05 + MockYieldVenue + MandatePlinthBridge).
 
 ## How this addresses the RFB themes
 
@@ -33,7 +33,7 @@ Concretely, an RFB 2 prediction-market team using Plinth gets:
 | Required | Provided |
 |---|---|
 | Product demo (live working product) | https://ccheh.github.io/plinth · contract on testnet.arcscan.app |
-| Founder pitch video | `video/demo.mp4` in this repo (~2.5 min, TTS-narrated slides) |
+| Founder pitch video | `video/demo.mp4` ([GitHub release](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4), ~3 min, TTS-narrated slides) |
 | Public GitHub repo | https://github.com/Ccheh/plinth (MIT) |
 | Traction questions | See above + the "Live vaults" table in [README.md](../README.md) |
 
@@ -55,7 +55,7 @@ Each is independent. Each composes with the others. Plinth uses the same design 
 
 - **What this IS**: an open-source infrastructure protocol. Not a trading agent itself.
 - **What this is NOT**: a fund I'm running, a custody service, or audited production code.
-- **Traction reality**: in-hackathon traction comes from helping other RFB teams tokenize their agents. We have 4 demo vaults at submission; the outreach kit invites more. The realistic 12-day ceiling for solo-built infrastructure submissions of this type is 5-10 integrators.
+- **Traction reality**: in-hackathon traction comes from helping other RFB teams tokenize their agents. We have 7 demo vaults at submission (5 with full lifecycles), 3 real Aster L1 BTC perp round-trips, 2 cryptographically verified Underwriter reviews, and the first on-chain sibling-protocol composition (Mandate × Plinth) — the outreach kit invites more. The realistic 12-day ceiling for solo-built infrastructure submissions of this type is 5-10 integrators.
 - **What we want from judges**: hard questions about the capability-constraint model and the Underwriter trust assumptions. The "agent-as-venue" attack surface is intentionally on-contract (off-chain reviewer detectable) rather than blocked in code — this is a defensibility trade-off documented in honest limits.
 
 ## Author

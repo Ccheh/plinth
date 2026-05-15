@@ -33,6 +33,12 @@ docs/strategy-*.md
 # video build artifacts (committed via gh release instead)
 video/demo.mp4
 video/demoTEMP*
+video/audio_sent/
+video/audio/silence/
+video/audio/narration_*.mp3
+video/voice_test_*.mp3
+video/test_voices.py
+demoTEMP_MPY_wvf_snd.mp4
 
 # Aster API docs (large, fetched from upstream for reference only)
 aster-futures-testnet.md

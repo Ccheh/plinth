@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-90%2F90%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-98%2F98%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -38,7 +38,7 @@ Combined deployed gas (v0 + v0.5): ~4M (~0.16 USDC at 40 gwei).
 
 - **Web UI**: https://ccheh.github.io/plinth/
 - **Verifiable-PnL Demo (interactive)**: https://ccheh.github.io/plinth/verify.html — reconciliation runs in your browser
-- **Pitch video**: [demo.mp4 (4 min, post-audit)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4) — covers Verifier, Risk Monitor, security audit, v0.5
+- **Pitch video**: [demo.mp4 (~3 min, v0.5 + composition + yield)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4) — covers Verifier, Risk Monitor, security audit, v0.5, Mandate composition, yield strategy
 - **Submission one-pager**: [docs/submission.md](docs/submission.md)
 - **Quickstart for agent builders** (15 min integration): [docs/quickstart-for-agents.md](docs/quickstart-for-agents.md)
 - **Security audit**: [docs/security-audit.md](docs/security-audit.md) — 11 findings, 6 closed in v0.5
