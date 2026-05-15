@@ -79,7 +79,7 @@
 <main>
   <h2>Vaults</h2>
   <div class="row">
-    <button id="refreshBtn">Refresh</button>
+    <button id="refreshBtn" title="Scan full chain history for any new vaults beyond the known list">Refresh (full scan)</button>
     <span class="info" id="vaultsInfo">scanning…</span>
   </div>
 
@@ -196,44 +196,63 @@ async function findVaultEvents() {
     });
 }
 
-async function loadVaults() {
-  document.getElementById("vaultsInfo").textContent = "scanning…";
-  let logs = [];
-  try {
-    logs = await findVaultEvents();
-    document.getElementById("rpcStatus").innerHTML = `<span class="ok">connected, latest block ${await client.getBlockNumber()}</span>`;
-  } catch (e) {
-    document.getElementById("rpcStatus").innerHTML = `<span class="err">RPC error: ${e.message.slice(0, 80)}</span>`;
-    return;
-  }
+// Known vault IDs on Plinth v0 (snapshot at submission). Used as the fast-path render —
+// reading vault state directly via `vaults(id)` view is O(1) vs. log-scanning the full history.
+// The Refresh button triggers a full log scan to discover any new vaults created later.
+const KNOWN_VAULT_IDS = [
+  "0xc003ec854ac99d1054541f6160568b13bff6f4e443bbaa25422ff3392eb29d46",
+  "0xc4c82a676f3b5a8f2aa511cab2e350667b9039029e57413fa08c18371cd06fc6",
+  "0xd33068c5f41fcc0165fc96af540cc2d8f0e79b58884fa8ca0f4a71ac4932d0c9",
+  "0x5c7eebdb1644c0a1ca6a976e4e81c8d634039caf806488868aa22232c14f9a5c",
+  "0x71002b008dcf44b560f61f9ee686f3789bf7b538e03a18307e7c1c1893b953c1",
+  "0xefb495a02c14af970104d62e9623d83eea8d0b725dea9ffd6b7aa479284430fc",
+];
 
+async function loadVaults(opts = {}) {
+  const { fullScan = false } = opts;
   const tbody = document.getElementById("vaultsBody");
-  if (logs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="info">No vaults found on contract ${shortHex(PLINTH)} since block ${PLINTH_DEPLOY_BLOCK}. (If you expected vaults, check the contract address above and your network.)</td></tr>`;
-    document.getElementById("vaultsInfo").textContent = "0 vaults";
+  const info = document.getElementById("vaultsInfo");
+  info.textContent = fullScan ? "scanning chain…" : "loading known vaults…";
+
+  // Fast path: read state for each known vault id directly. ~1s, no log scan needed.
+  let vaultIds = [...KNOWN_VAULT_IDS];
+  document.getElementById("rpcStatus").innerHTML = `<span class="ok">connected, latest block ${await client.getBlockNumber()}</span>`;
+
+  // Slow path: if user clicks Refresh, scan full chain history for any new vaults too.
+  if (fullScan) {
+    try {
+      const logs = await findVaultEvents();
+      const seen = new Set(vaultIds.map(s => s.toLowerCase()));
+      for (const l of logs) if (!seen.has(l.topics[1].toLowerCase())) vaultIds.push(l.topics[1]);
+    } catch (e) {
+      info.textContent = `scan error: ${e.message.slice(0,60)}`;
+    }
+  }
+
+  if (vaultIds.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="info">No vaults found on contract ${shortHex(PLINTH)} since block ${PLINTH_DEPLOY_BLOCK}.</td></tr>`;
+    info.textContent = "0 vaults";
     return;
   }
 
-  // Fetch live state for each
-  const rows = [];
-  for (const l of logs) {
-    const decoded = decodeEventLog({ abi: [parseAbiItem("event VaultCreated(bytes32 indexed vaultId, address indexed agent, address[] approvedVenues, string strategyDescriptor, uint256 initialDeposit)")], data: l.data, topics: l.topics });
-    const vaultId = decoded.args.vaultId;
+  // Fetch live state for each vault id in parallel — typically completes in ~1-2 seconds
+  const rows = (await Promise.all(vaultIds.map(async (vaultId) => {
     try {
-      const [agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor] = await client.readContract({
-        address: PLINTH, abi: PLINTH_ABI, functionName: "vaults", args: [vaultId],
-      });
-      const nav = await client.readContract({
-        address: PLINTH, abi: PLINTH_ABI, functionName: "nav", args: [vaultId],
-      });
-      rows.push({ vaultId, agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor, nav, blockNumber: l.blockNumber, txHash: l.transactionHash });
-    } catch {/* skip broken */}
-  }
+      const [vaultData, nav] = await Promise.all([
+        client.readContract({ address: PLINTH, abi: PLINTH_ABI, functionName: "vaults", args: [vaultId] }),
+        client.readContract({ address: PLINTH, abi: PLINTH_ABI, functionName: "nav", args: [vaultId] }),
+      ]);
+      const [agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor] = vaultData;
+      // Filter out non-existent vaults (status=0/None means the id never existed)
+      if (status === 0) return null;
+      return { vaultId, agent, createdAt, status, totalShares, inVault, deployedAUM, reportedPnL, strategyDescriptor, nav };
+    } catch { return null; }
+  }))).filter(Boolean);
 
-  document.getElementById("vaultsInfo").textContent = `${rows.length} vault(s)`;
+  info.textContent = fullScan ? `${rows.length} vault(s) (full scan)` : `${rows.length} vault(s)`;
   tbody.innerHTML = rows.map(r => `
     <tr>
-      <td class="mono"><a href="${EXPLORER}/tx/${r.txHash}" target="_blank">${shortHex(r.vaultId)}</a></td>
+      <td class="mono"><a href="${EXPLORER}/address/${PLINTH}" target="_blank">${shortHex(r.vaultId)}</a></td>
       <td class="mono">${shortHex(r.agent, 8, 4)}</td>
       <td>${r.strategyDescriptor.slice(0, 50)}${r.strategyDescriptor.length > 50 ? "…" : ""}</td>
       <td>${statusPill(r.status)}</td>
@@ -331,7 +350,7 @@ function decodeReviewUri(uri) {
   return uri;
 }
 
-document.getElementById("refreshBtn").addEventListener("click", loadVaults);
+document.getElementById("refreshBtn").addEventListener("click", () => loadVaults({ fullScan: true }));
 loadVaults();
 </script>
 </body>
