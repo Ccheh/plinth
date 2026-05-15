@@ -70,7 +70,8 @@
     — Underwriter cryptographically reconciles agent's reportedPnL against Aster L1 trade history, runs in your browser.
   </div>
   <div class="meta">
-    Plinth contract: <a id="plinthLink" target="_blank" rel="noopener">0xc2994ce3df612ebd2f898244a992a0bbfef86627</a><br>
+    Plinth v0 (this UI): <a id="plinthLink" target="_blank" rel="noopener">0xc2994ce3df612ebd2f898244a992a0bbfef86627</a> — historical / 5 demo vaults + Aster L1 verifiable-PnL vault<br>
+    Plinth v0.5 (recommended, security-hardened): <a href="https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7" target="_blank" rel="noopener">0xba1b087b0ac77b398c250a9fd7e298f3f96addc7</a> — closes 6 audit findings, 98/98 tests<br>
     Chain: Arc Testnet (chainId 5042002) · <span id="rpcStatus" class="info">connecting…</span>
   </div>
 </header>
@@ -144,18 +145,21 @@ function statusPill(s) {
   return s;
 }
 
+// v0 contract was deployed at this block. We walk forward from here to find all vaults.
+const PLINTH_DEPLOY_BLOCK = 41_977_066n;
+
 async function findVaultEvents() {
   const latest = await client.getBlockNumber();
-  // Arc Testnet caps eth_getLogs at 10k blocks. Walk back in chunks.
+  // Arc Testnet caps eth_getLogs at 10k blocks. Walk forward in chunks from deploy block.
   const CHUNK = 9_900n;
   const event = parseAbiItem("event VaultCreated(bytes32 indexed vaultId, address indexed agent, address[] approvedVenues, string strategyDescriptor, uint256 initialDeposit)");
   const all = [];
-  for (let i = 0; i < 3; i++) {  // last ~30k blocks
-    const to = latest - BigInt(i) * CHUNK;
-    const from = to > CHUNK ? to - CHUNK : 0n;
-    const logs = await client.getLogs({ address: PLINTH, event, fromBlock: from, toBlock: to });
+  let cursor = PLINTH_DEPLOY_BLOCK;
+  while (cursor <= latest) {
+    const to = cursor + CHUNK > latest ? latest : cursor + CHUNK;
+    const logs = await client.getLogs({ address: PLINTH, event, fromBlock: cursor, toBlock: to });
     all.push(...logs);
-    if (from === 0n) break;
+    cursor = to + 1n;
   }
   // Dedup by vaultId, keep first (chronologically earliest)
   const seen = new Set();
@@ -223,15 +227,22 @@ window.showDetail = async function(vaultId) {
   const totalAUM = r.inVault + r.deployedAUM + r.reportedPnL;
   const pnlClass = r.reportedPnL > 0n ? "green" : r.reportedPnL < 0n ? "red" : "";
 
-  // Reviews
+  // Reviews — walk forward from deploy block in 9.9k chunks (Arc caps eth_getLogs at 10k blocks)
   const latest = await client.getBlockNumber();
   const reviewEvent = parseAbiItem("event UnderwriterReviewPosted(bytes32 indexed vaultId, address indexed underwriter, bytes32 reviewHash, string reviewUri)");
-  const fromBlock = latest > 9_900n ? latest - 9_900n : 0n;
   let reviews = [];
   try {
-    const logs = await client.getLogs({ address: PLINTH, event: reviewEvent, args: { vaultId }, fromBlock });
-    reviews = logs.map(l => decodeEventLog({ abi:[reviewEvent], data:l.data, topics:l.topics }).args)
-      .map((a, i) => ({ ...a, blockNumber: logs[i].blockNumber, txHash: logs[i].transactionHash }));
+    const CHUNK = 9_900n;
+    let cursor = PLINTH_DEPLOY_BLOCK;
+    const allLogs = [];
+    while (cursor <= latest) {
+      const to = cursor + CHUNK > latest ? latest : cursor + CHUNK;
+      const chunkLogs = await client.getLogs({ address: PLINTH, event: reviewEvent, args: { vaultId }, fromBlock: cursor, toBlock: to });
+      allLogs.push(...chunkLogs);
+      cursor = to + 1n;
+    }
+    reviews = allLogs.map(l => decodeEventLog({ abi:[reviewEvent], data:l.data, topics:l.topics }).args)
+      .map((a, i) => ({ ...a, blockNumber: allLogs[i].blockNumber, txHash: allLogs[i].transactionHash }));
   } catch {}
 
   const container = document.getElementById("detailContainer");
