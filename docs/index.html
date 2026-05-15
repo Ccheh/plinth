@@ -148,10 +148,24 @@ function statusPill(s) {
 // v0 contract was deployed at this block. We walk forward from here to find all vaults.
 const PLINTH_DEPLOY_BLOCK = 41_977_066n;
 
+async function getLogsWithRetry(params, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await client.getLogs(params);
+      return r;
+    } catch (e) {
+      if (attempt === retries) return [];
+      await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
+  return [];
+}
+
 async function findVaultEvents() {
   const latest = await client.getBlockNumber();
-  // Arc Testnet caps eth_getLogs at 10k blocks. Build chunk ranges from deploy → latest, query in parallel.
+  // Arc Testnet caps eth_getLogs at 10k blocks AND throttles high parallelism, so batch in groups of 5.
   const CHUNK = 9_900n;
+  const BATCH = 5;
   const event = parseAbiItem("event VaultCreated(bytes32 indexed vaultId, address indexed agent, address[] approvedVenues, string strategyDescriptor, uint256 initialDeposit)");
   const ranges = [];
   let cursor = PLINTH_DEPLOY_BLOCK;
@@ -161,12 +175,15 @@ async function findVaultEvents() {
     cursor = to + 1n;
   }
   const info = document.getElementById("vaultsInfo");
-  if (info) info.textContent = `scanning ${ranges.length} chunks…`;
-  // Parallel; resilient to single-chunk failures
-  const results = await Promise.all(ranges.map(([from, to]) =>
-    client.getLogs({ address: PLINTH, event, fromBlock: from, toBlock: to }).catch(() => [])
-  ));
-  const all = results.flat();
+  const all = [];
+  for (let i = 0; i < ranges.length; i += BATCH) {
+    if (info) info.textContent = `scanning ${i+1}-${Math.min(i+BATCH, ranges.length)} of ${ranges.length} chunks…`;
+    const batch = ranges.slice(i, i + BATCH);
+    const results = await Promise.all(batch.map(([from, to]) =>
+      getLogsWithRetry({ address: PLINTH, event, fromBlock: from, toBlock: to })
+    ));
+    all.push(...results.flat());
+  }
   // Dedup by vaultId, keep first (chronologically earliest)
   const seen = new Set();
   return all
@@ -235,12 +252,13 @@ window.showDetail = async function(vaultId) {
   const totalAUM = r.inVault + r.deployedAUM + r.reportedPnL;
   const pnlClass = r.reportedPnL > 0n ? "green" : r.reportedPnL < 0n ? "red" : "";
 
-  // Reviews — walk forward from deploy block in 9.9k chunks, in parallel
+  // Reviews — batched (5 at a time) with retry, same pattern as vault scan
   const latest = await client.getBlockNumber();
   const reviewEvent = parseAbiItem("event UnderwriterReviewPosted(bytes32 indexed vaultId, address indexed underwriter, bytes32 reviewHash, string reviewUri)");
   let reviews = [];
   try {
     const CHUNK = 9_900n;
+    const BATCH = 5;
     const ranges = [];
     let cursor = PLINTH_DEPLOY_BLOCK;
     while (cursor <= latest) {
@@ -248,10 +266,15 @@ window.showDetail = async function(vaultId) {
       ranges.push([cursor, to]);
       cursor = to + 1n;
     }
-    const results = await Promise.all(ranges.map(([from, to]) =>
-      client.getLogs({ address: PLINTH, event: reviewEvent, args: { vaultId }, fromBlock: from, toBlock: to }).catch(() => [])
-    ));
-    const allLogs = results.flat().sort((a, b) => Number(a.blockNumber - b.blockNumber));
+    const allLogs = [];
+    for (let i = 0; i < ranges.length; i += BATCH) {
+      const batch = ranges.slice(i, i + BATCH);
+      const results = await Promise.all(batch.map(([from, to]) =>
+        getLogsWithRetry({ address: PLINTH, event: reviewEvent, args: { vaultId }, fromBlock: from, toBlock: to })
+      ));
+      allLogs.push(...results.flat());
+    }
+    allLogs.sort((a, b) => Number(a.blockNumber - b.blockNumber));
     reviews = allLogs.map(l => decodeEventLog({ abi:[reviewEvent], data:l.data, topics:l.topics }).args)
       .map((a, i) => ({ ...a, blockNumber: allLogs[i].blockNumber, txHash: allLogs[i].transactionHash }));
   } catch {}
