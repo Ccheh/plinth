@@ -17,8 +17,9 @@
 | Contract | Address | Deploy tx |
 |---|---|---|
 | **PlinthV05** | [`0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7) | [`0x55bd1dce...`](https://testnet.arcscan.app/tx/0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d) |
+| **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **90/90 forge tests pass**, including 5 exploit POCs that demonstrate v0 vulnerabilities and 18 defense tests that prove v0.5 closes them.
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **98/98 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 8 yield-strategy + 15 other coverage).
 
 First v0.5 vault on chain ([explorer](https://testnet.arcscan.app/tx/0x5d3fc733eb32502f601741874333abde69c2940b5e071bd92b182116100b4e28)) with deposit cooldown firing as expected: investor deposit `0x2dc4b91c...` → simulated immediate redeem reverts with `SharesPendingVesting (0x6ba41e7c)`.
 
@@ -71,6 +72,19 @@ Every Critical/High finding has both an **exploit POC test** in [`Plinth.t.sol`]
 Two findings deferred to v0.6 (#5 funds stuck at venue post-close; #7 createVault spam — both have documented mitigations). Three findings are already safe-by-design (reentrancy via OZ `ReentrancyGuard` + CEI; donation attack neutralized by per-vault accounting; first-depositor inflation prevented by NAV reading storage not balance).
 
 A v0.5 vault is live on chain with deposit cooldown firing correctly: see [`Plinth.t.sol`](contracts/test/Plinth.t.sol) exploit tests and [`docs/security-audit.md`](docs/security-audit.md) for the full report.
+
+### Yield Strategy — vault cash-sweep into T-bill yield (testnet mock, real USYC in production)
+
+A real AI-trading fund leaves significant capital idle most of the time. Plinth's capability-constraint model makes "cash sweep into a yield venue" a clean, in-architecture pattern: deploy idle USDC to a yield venue exactly the same way capital flows to a trading venue.
+
+Live on Arc Testnet:
+- **MockYieldVenue** at `0xe5cceca53ccb15affc58016e1757e1a138ef3144` accrues continuous 5% APR on principal, with pre-funded reserve backing payouts.
+- Demo lifecycle ([sdk-ts/examples/yield-strategy.ts](sdk-ts/examples/yield-strategy.ts)) ran end-to-end: agent creates vault → investor deposits 0.005 USDC → agent sweeps 0.004 to yield venue → 180s passes → yield accrues exactly `1.218 × 10^-9 USDC` (matches `5% × 0.004 × 180/(365×24×3600)` to 12 decimals) → agent reports as PnL → NAV moves from `1.0` to `1.000000202943`.
+- On-chain evidence: [vault page](https://testnet.arcscan.app/tx/0xe1d50bb3259be427bc14f1b124e6ec1ea0fe4b7ba085f46ba055069beebc4be7) · [deploy-to-venue tx](https://testnet.arcscan.app/tx/0xba87e4a011bbe03ea83d1676147cf693d0494210c1ad3d93b8cd475c37f98320) · [reportPnL tx](https://testnet.arcscan.app/tx/0x598d2d8ce6b4b19846fcadcfdb5decf640963588f80f1b7c96bc09977bd52884)
+
+The Verifier pattern from Aster L1 applies identically: any third party can read `MockYieldVenue.accruedYield()` on chain and reconcile it against the agent's `reportPnL` value. Same architecture, different yield source.
+
+**Production wiring**: replace `MockYieldVenue` with the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. See the bottom of [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts) for the reference flow. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue.
 
 ### Verifiable PnL — agent's claim matched against Aster L1 trade history
 

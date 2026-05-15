@@ -35,6 +35,11 @@ export const PLINTH_V05_ARC_TESTNET = {
   plinth: "0xba1b087b0ac77b398c250a9fd7e298f3f96addc7" as Hex,
   mockVenue1: "0x50bf887e4957261e7ca0c6b4eeb61ab83ad6ddcd" as Hex,
   mockVenue2: "0xc0f8d26cbf7123b0f5148b9feae6c3234cccda35" as Hex,
+  /** Testnet mock for USYC-style T-bill cash-sweep strategy (5% APR).
+   *  In production this slot would be the real USYC token on Base, with
+   *  Arc Testnet capital bridged via CCTP. */
+  mockYieldVenue: "0xe5cceca53ccb15affc58016e1757e1a138ef3144" as Hex,
+  yieldVenueDeployTx: "0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9" as Hex,
   deployTx: "0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d" as Hex,
   DEPOSIT_COOLDOWN_SECONDS: 3600,
   MAX_PNL_MULTIPLE: 10n,
