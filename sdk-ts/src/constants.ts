@@ -40,6 +40,12 @@ export const PLINTH_V05_ARC_TESTNET = {
    *  Arc Testnet capital bridged via CCTP. */
   mockYieldVenue: "0xe5cceca53ccb15affc58016e1757e1a138ef3144" as Hex,
   yieldVenueDeployTx: "0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9" as Hex,
+  /** Bridge wiring PlinthV05 to Mandate v0 (sibling protocol composition).
+   *  Enables institutional issuers to authorize agent-mediated deposits
+   *  via capability-bound Mandate.execute → Plinth.deposit atomic flow. */
+  mandatePlinthBridge: "0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50" as Hex,
+  mandateContract: "0xfBBDAeC05E0061ADeb955896DFF183fdd412E6E4" as Hex,
+  bridgeDeployTx: "0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057" as Hex,
   deployTx: "0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d" as Hex,
   DEPOSIT_COOLDOWN_SECONDS: 3600,
   MAX_PNL_MULTIPLE: 10n,

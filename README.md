@@ -18,6 +18,7 @@
 |---|---|---|
 | **PlinthV05** | [`0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7) | [`0x55bd1dce...`](https://testnet.arcscan.app/tx/0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d) |
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
+| **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
 Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **98/98 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 8 yield-strategy + 15 other coverage).
 
@@ -85,6 +86,22 @@ Live on Arc Testnet:
 The Verifier pattern from Aster L1 applies identically: any third party can read `MockYieldVenue.accruedYield()` on chain and reconcile it against the agent's `reportPnL` value. Same architecture, different yield source.
 
 **Production wiring**: replace `MockYieldVenue` with the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. See the bottom of [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts) for the reference flow. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue.
+
+### Sibling protocol composition — Mandate × Plinth on chain
+
+Five protocols (Cadence, Crucible, Helm, Mandate, Plinth) ship as independent contracts. The README has long described how they compose architecturally; v0.5 ships the first **actual on-chain composition** between two of them — Mandate authorizing Plinth-vault deposits via a bridge contract.
+
+The story it enables: an institutional issuer (bank, fund, corporate treasury — typically a multi-sig) creates a Mandate authorizing an AI agent to deposit USDC into a specific Plinth Vault, bounded by spend ceiling + counterparty whitelist + purpose whitelist + time window. The agent calls [`MandatePlinthBridge.depositViaMandate`](contracts/src/MandatePlinthBridge.sol) which atomically pulls capital out of the mandate (Mandate.execute) and deposits it into the vault (Plinth.deposit), with shares recorded under the mandate's issuer. Even if the agent's private key is compromised, the agent cannot redeem the shares — capability constraint preserved across both protocols.
+
+Live on Arc Testnet:
+- **MandatePlinthBridge** at `0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50` wires [`Mandate`](https://testnet.arcscan.app/address/0xfBBDAeC05E0061ADeb955896DFF183fdd412E6E4) to [`PlinthV05`](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7).
+- Demo lifecycle ([sdk-ts/examples/mandate-plinth-composition.ts](sdk-ts/examples/mandate-plinth-composition.ts)) ran end-to-end on chain:
+  1. Vault created on Plinth v0.5 with bridge as approved-venue ([create tx](https://testnet.arcscan.app/tx/0x9f21316e30da7436b7ef4941edd0bd91480ff1a99858c796f85da8b8ce9f77fa))
+  2. Mandate issued — principal = bridge, ceiling = 0.01 USDC, counterparty whitelist = single Merkle leaf for bridge, purpose = `keccak256("plinth_invest_v0")`, funded with 0.005 USDC ([issue tx](https://testnet.arcscan.app/tx/0x1b65d3544a18ac75e096d0399d242c29356ef075b246b16f7431bb84a29f984b))
+  3. Bridge.depositViaMandate triggered: atomic Mandate.execute → Plinth.deposit ([composed tx](https://testnet.arcscan.app/tx/0x4bdb577e6c4698cae3f2f3a8cc010e0cb9d95cb6e06ba83a5580e3bf72fec4ea))
+  - Final state on chain: Mandate.spent = 0.005 USDC ✓, Bridge.sharesOfMandate[mandate][vault] = 0.005 ✓, Plinth.inVault on vault += 0.005 ✓
+
+This is the first **real architectural compose** of sibling protocols, not just README cross-references. Cadence + Plinth (per-call fees on vault redeem), Crucible + Plinth (vault performance scored as agent quality), and Helm + Plinth (agent DAO voting on vault parameters) follow the same bridge pattern.
 
 ### Verifiable PnL — agent's claim matched against Aster L1 trade history
 

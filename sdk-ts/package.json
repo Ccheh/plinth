@@ -12,9 +12,21 @@
     "check": "tsc --noEmit",
     "demo": "tsx examples/full-lifecycle.ts"
   },
-  "keywords": ["plinth", "arc", "usdc", "ai-agents", "trading", "hedge-fund", "tokenized", "vault"],
+  "keywords": [
+    "plinth",
+    "arc",
+    "usdc",
+    "ai-agents",
+    "trading",
+    "hedge-fund",
+    "tokenized",
+    "vault"
+  ],
   "license": "MIT",
   "dependencies": {
+    "@circle-fin/adapter-viem-v2": "^1.11.0",
+    "@circle-fin/bridge-kit": "^1.10.0",
+    "@circle-fin/provider-cctp-v2": "^1.8.1",
     "viem": "^2.48.11"
   },
   "devDependencies": {
