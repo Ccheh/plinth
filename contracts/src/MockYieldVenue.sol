@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {IYieldVenue} from "./interfaces/IYieldVenue.sol";
+
 /// @title  MockYieldVenue — testnet stand-in for a T-bill-style yield strategy
 /// @notice Models the "USYC sweep" cash-management pattern: USDC sitting idle
 ///         in the vault is deployed here, accrues continuous yield at a fixed
@@ -23,7 +25,7 @@ pragma solidity 0.8.28;
 ///         via `fundReserve()` at deployment time so yield payouts are
 ///         actually backed by on-chain funds. Otherwise `returnAll()` would
 ///         revert when trying to send out principal + accrued yield.
-contract MockYieldVenue {
+contract MockYieldVenue is IYieldVenue {
     /* ---------------- constants ---------------- */
 
     /// @notice Annual percentage yield in basis points. 500 = 5.00%.
@@ -47,10 +49,8 @@ contract MockYieldVenue {
     address public immutable operator;
 
     /* ---------------- events ---------------- */
+    /* `FundsReceived`, `YieldSettled`, `PrincipalReturned` are inherited from IYieldVenue. */
 
-    event FundsReceived(address indexed from, uint256 amount, uint256 newPrincipal);
-    event YieldSettled(uint256 yieldAccrued, uint256 newPrincipal);
-    event PrincipalReturned(address indexed plinth, bytes32 indexed vaultId, uint256 amount);
     event ReserveFunded(address indexed from, uint256 amount);
 
     /* ---------------- construction ---------------- */
@@ -93,6 +93,21 @@ contract MockYieldVenue {
     /// reportedPnL on Plinth.
     function currentBalance() external view returns (uint256) {
         return principal + accruedYield();
+    }
+
+    /// @notice Principal-only view, matching IYieldVenue.principalBalance.
+    function principalBalance() external view returns (uint256) {
+        return principal;
+    }
+
+    /// @notice IYieldVenue metadata — identifies this as the testnet mock.
+    function yieldSource() external pure returns (string memory) {
+        return "mock-5pct-apr";
+    }
+
+    /// @notice IYieldVenue semver.
+    function yieldVenueVersion() external pure returns (string memory) {
+        return "0.5.0";
     }
 
     /// @dev Rolls any pending yield into principal and resets the clock.

@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-98%2F98%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-108%2F108%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -85,7 +85,16 @@ Live on Arc Testnet:
 
 The Verifier pattern from Aster L1 applies identically: any third party can read `MockYieldVenue.accruedYield()` on chain and reconcile it against the agent's `reportPnL` value. Same architecture, different yield source.
 
-**Production wiring**: replace `MockYieldVenue` with the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. See the bottom of [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts) for the reference flow. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue.
+**Pluggable yield-venue architecture (v0.6)**: All yield venues now implement a common [`IYieldVenue`](contracts/src/interfaces/IYieldVenue.sol) interface, making the production swap drop-in. Shipped adapters:
+
+| Adapter | Status | Underlying |
+|---|---|---|
+| [`MockYieldVenue`](contracts/src/MockYieldVenue.sol) | ✅ Live on Arc Testnet | Fixed 5% APR simple-interest mock |
+| [`MorphoVenueAdapter`](contracts/src/MorphoVenueAdapter.sol) | 🟡 Scaffold (placeholder mode) — production-ready, awaiting Morpho's Arc deployment | Morpho Vault V2 (ERC-4626) |
+
+The adapter contract is fully unit-tested against a canonical ERC-4626 mock vault (10 tests covering placeholder + production modes, full lifecycle from deposit → yield accrual → harvest → principal-return). When Morpho lands on Arc, `MorphoVenueAdapter` constructor takes the real vault address and the placeholder gate flips off — zero changes to Plinth.
+
+**Production wiring path** (documented end-to-end in [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts)): the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue under the same `IYieldVenue` abstraction.
 
 ### Sibling protocol composition — Mandate × Plinth on chain
 
