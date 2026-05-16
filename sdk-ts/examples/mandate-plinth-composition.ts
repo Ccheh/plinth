@@ -31,8 +31,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_TESTNET, PLINTH_V05_ARC_TESTNET, PLINTH_ABI } from "../src/index.js";
 import type { Hex } from "viem";
-
-process.loadEnvFile("D:\\桌面\\arc\\.env");
+import "./_load-env.js";  // portable .env loader (looks in cwd / sdk-ts / repo root)
 
 const ARC_CHAIN = defineChain({
   id: ARC_TESTNET.chainId,

@@ -9,6 +9,7 @@
  * ~7 on-chain txs, all costs in fractional USDC of gas.
  */
 
+import "./_load-env.js";  // portable .env loader (looks in cwd / sdk-ts / repo root)
 import { parseEther, formatEther, type Hex } from "viem";
 import {
   AgentClient, InvestorClient, BrowseClient,
@@ -16,10 +17,13 @@ import {
   formatUsdc,
 } from "../src/index.js";
 
-process.loadEnvFile("D:\\桌面\\arc\\.env");
 const AGENT_PK = process.env.PRIVATE_KEY as Hex;
 const INVESTOR_PK = process.env.SERVICE_PRIVATE_KEY as Hex;
-if (!AGENT_PK || !INVESTOR_PK) throw new Error("Missing PRIVATE_KEY / SERVICE_PRIVATE_KEY");
+if (!AGENT_PK || !INVESTOR_PK) {
+  throw new Error(
+    "Missing PRIVATE_KEY / SERVICE_PRIVATE_KEY. Copy .env.example to .env at the repo root and fill in your testnet keys."
+  );
+}
 
 const PLINTH = PLINTH_ARC_TESTNET.plinth;
 const VENUE = PLINTH_ARC_TESTNET.mockVenue1;

@@ -12,6 +12,18 @@
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
 
+### Aligned with Arc Blueprints
+
+Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](https://www.arc.io/blog)** (use-case briefs Arc published May 2026). Each row maps a blueprint to the specific Plinth primitive that addresses it:
+
+| Arc Blueprint | How Plinth addresses it |
+|---|---|
+| **[Agentic Economy](https://www.arc.io/blog/how-arc-supports-the-agentic-economy-arc-blueprints)** | Plinth IS the capital layer for AI agents — vault creation, NAV accounting, capability-not-custody constraints. Five sibling protocols (Cadence/Crucible/Helm/Mandate/Plinth) compose into an agent-economy stack |
+| **[Treasury Management](https://www.arc.io/blog/how-arc-supports-treasury-management-arc-blueprints)** | A Plinth vault IS the AI agent's on-chain treasury: idle USDC sweeps to yield via `IYieldVenue` adapters (Morpho-ready), trading capital routes via approved-venue whitelist, redemptions open at NAV |
+| **[Lending and Borrowing](https://www.arc.io/blog/how-arc-supports-lending-and-borrowing-arc-blueprints)** | `MorphoVenueAdapter` (ERC-4626 scaffold) plugs Plinth vaults into Morpho on Arc when live. Capability constraints on the borrower side: agent can route to approved lending venues but never withdraw to arbitrary addresses |
+| **[Capital Markets Settlement](https://www.arc.io/blog/how-arc-supports-capital-markets-settlement-arc-blueprints)** | Verifiable PnL = settlement primitive: when the trading venue is itself a public chain (Aster L1, Synthra perp on Arc), an independent Underwriter reconciles agent-reported PnL cryptographically. Vault #5: matched to 0.00% delta on chain |
+| **[Onchain Credit Markets](https://www.arc.io/blog/how-arc-supports-onchain-credit-markets-arc-blueprints)** | `MandatePlinthBridge` is the first on-chain sibling-protocol composition: institutional issuers authorize agent-mediated deposits with cryptographic capability constraints across both protocols — capability-bound credit. [`Live tx`](https://testnet.arcscan.app/tx/0x4bdb577e6c4698cae3f2f3a8cc010e0cb9d95cb6e06ba83a5580e3bf72fec4ea) |
+
 ### v0.5 on Arc Testnet (recommended — security hardened)
 
 | Contract | Address | Deploy tx |
@@ -20,7 +32,7 @@
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 | **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **98/98 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 8 yield-strategy + 15 other coverage).
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **119/119 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
 
 First v0.5 vault on chain ([explorer](https://testnet.arcscan.app/tx/0x5d3fc733eb32502f601741874333abde69c2940b5e071bd92b182116100b4e28)) with deposit cooldown firing as expected: investor deposit `0x2dc4b91c...` → simulated immediate redeem reverts with `SharesPendingVesting (0x6ba41e7c)`.
 

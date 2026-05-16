@@ -82,9 +82,14 @@ async function pollReceipt(client: any, hash: Hex, label: string, maxTries = 30)
 }
 
 async function main() {
-  // Use Node's native env-file loader (same pattern as underwriter scripts)
-  process.loadEnvFile("D:\\桌面\\arc\\.env");
+  // Portable .env loader (cwd → sdk-ts → repo root). See _load-env.ts for details.
+  await import("./_load-env.js");
 
+  if (!process.env.PRIVATE_KEY || !process.env.SERVICE_PRIVATE_KEY) {
+    throw new Error(
+      "Missing PRIVATE_KEY / SERVICE_PRIVATE_KEY. Copy .env.example to .env at the repo root and fill in your testnet keys."
+    );
+  }
   const agentAcc    = privateKeyToAccount(process.env.PRIVATE_KEY as Hex);
   const investorAcc = privateKeyToAccount(process.env.SERVICE_PRIVATE_KEY as Hex);
 
