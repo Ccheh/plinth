@@ -44,4 +44,4 @@ demoTEMP_MPY_wvf_snd.mp4
 aster-futures-testnet.md
 
 # Demo wallet keys generated at runtime (testnet only, but still — don't commit)
-underwriter/bob-wallet.txt
+underwriter/*-wallet.txt
