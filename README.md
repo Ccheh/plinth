@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-145%2F145%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-145%2F145%20%2B%203%20invariants-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -32,7 +32,7 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 | **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **145/145 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 12 Cadence×Plinth bridge + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **145/145 unit tests + 3 stateful invariants** (5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 12 Cadence×Plinth bridge + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 67 other + 3 fuzz-verified invariants: solvency, deployedAUM ledger consistency, shares conservation — verified across 60K+ random call sequences over 250s of fuzzing).
 
 **v0.6 RiskGuard (just shipped)**: four risk signals previously enforced only by the off-chain `risk-monitor.ts` script are now **on-chain primitives** in [`PlinthV06.sol`](contracts/src/PlinthV06.sol) — no admin key, no off-chain dependency:
 
