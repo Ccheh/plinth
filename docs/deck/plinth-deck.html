@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Plinth — Investor Deck (Circle Developer Grant 2026)</title>
+<style>
+  @page { size: 1920px 1080px; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #0f1221;
+    color: #ebebf0;
+  }
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    padding: 80px 100px;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide:last-child { page-break-after: auto; }
+  .brand {
+    position: absolute;
+    bottom: 40px; left: 100px;
+    font-size: 22px;
+    color: #aab1c8;
+  }
+  .page-num {
+    position: absolute;
+    bottom: 40px; right: 100px;
+    font-size: 22px;
+    color: #5a6073;
+  }
+  h1 {
+    font-size: 72px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #ebebf0;
+  }
+  h1 .accent { color: #ffc850; }
+  h2 {
+    font-size: 56px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #ebebf0;
+  }
+  h2::after {
+    content: "";
+    display: block;
+    width: 100px;
+    height: 5px;
+    background: #ffc850;
+    margin-top: 16px;
+  }
+  .subtitle {
+    font-size: 32px;
+    color: #6ec8ff;
+    margin-bottom: 50px;
+  }
+  .body-text { font-size: 28px; line-height: 1.5; color: #ebebf0; }
+  .dim { color: #aab1c8; }
+  .accent { color: #ffc850; }
+  .highlight { color: #6ec8ff; }
+  .green { color: #6edca8; }
+  .mono { font-family: "Consolas", monospace; }
+
+  /* slide-1 title */
+  .title-slide {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .title-slide .eyebrow {
+    color: #ffc850;
+    letter-spacing: 4px;
+    font-size: 28px;
+    margin-bottom: 24px;
+  }
+  .title-slide .main {
+    font-size: 200px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .title-slide .tag {
+    font-size: 48px;
+    color: #6ec8ff;
+    margin-top: 30px;
+  }
+  .title-slide .info {
+    font-size: 28px;
+    color: #aab1c8;
+    margin-top: 60px;
+  }
+
+  /* boxes */
+  .box {
+    background: #161a2e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 36px;
+    margin-bottom: 24px;
+  }
+  .box-title {
+    font-size: 32px;
+    color: #ffc850;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .box-content {
+    font-size: 24px;
+    line-height: 1.5;
+    color: #ebebf0;
+  }
+  .row { display: flex; gap: 24px; }
+  .col { flex: 1; }
+
+  /* architecture diagram */
+  .arch {
+    display: flex;
+    gap: 16px;
+    margin-top: 40px;
+    align-items: stretch;
+  }
+  .protocol {
+    flex: 1;
+    background: #161a2e;
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+  }
+  .protocol.live-comp { border-color: #6edca8; }
+  .protocol-name {
+    font-size: 28px; font-weight: 700; color: #ebebf0;
+    margin-bottom: 12px;
+  }
+  .protocol-role {
+    font-size: 18px; color: #aab1c8;
+  }
+  .arrows {
+    margin: 40px 0;
+    text-align: center;
+    font-size: 24px;
+    color: #6edca8;
+  }
+
+  /* sequence diagram */
+  .seq-row {
+    display: flex; align-items: center;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+  .seq-num {
+    width: 60px; height: 60px;
+    background: #ffc850; color: #0f1221;
+    border-radius: 50%; font-weight: 800; font-size: 32px;
+    display: flex; align-items: center; justify-content: center;
+    margin-right: 30px;
+    flex-shrink: 0;
+  }
+  .seq-content { color: #ebebf0; }
+
+  /* milestones table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+  }
+  th, td {
+    padding: 18px 24px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 24px;
+  }
+  th { color: #aab1c8; font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+  td.tag { color: #ffc850; font-weight: 700; width: 100px; }
+  td.amount { color: #6edca8; width: 160px; font-family: "Consolas", monospace; }
+
+  /* state table */
+  .state-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-top: 30px;
+  }
+  .state-card {
+    background: #161a2e;
+    border-radius: 10px;
+    padding: 28px;
+    border-left: 4px solid #6edca8;
+  }
+  .state-card.warn { border-left-color: #ffc850; }
+  .state-label {
+    font-size: 18px; color: #aab1c8; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 10px;
+  }
+  .state-value {
+    font-size: 28px; font-weight: 700; color: #ebebf0;
+  }
+  .state-detail {
+    font-size: 18px; color: #6ec8ff; margin-top: 6px;
+    font-family: "Consolas", monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================== -->
+<!--  SLIDE 1 — Title                                                -->
+<!-- ============================================================== -->
+<div class="slide title-slide">
+  <div class="eyebrow">CIRCLE DEVELOPER GRANT 2026 · COHORT 2</div>
+  <div class="main">Plinth</div>
+  <div class="tag">Capital layer for AI trading agents on Arc</div>
+  <div class="info">
+    Zen Chen · github.com/Ccheh/plinth · MIT, no admin keys<br>
+    11 contracts live on Arc Testnet · 176/176 tests + 3 stateful invariants · 11-finding pre-deployment audit
+  </div>
+  <div class="brand">May 2026</div>
+</div>
+
+<!-- ============================================================== -->
+<!--  SLIDE 2 — Problem                                              -->
+<!-- ============================================================== -->
+<div class="slide">
+  <h2>The trust gap blocks AI trading from scaling</h2>
+  <p class="subtitle">Agents on Arc run on their own balance. Taking outside capital is blocked by two failures.</p>
+
+  <div class="row" style="margin-top: 40px;">
+    <div class="box col">
+      <div class="box-title">1. Custody</div>
+      <div class="box-content">
+        Investors must hand keys or signing authority to an unknown agent.<br><br>
+        Prior protocols (Enzyme, dHEDGE) custody via multisig — heavy, slow, requires KYC infrastructure.<br><br>
+        <span class="green">Plinth: capability-not-custody — agent directs funds, can never withdraw to new addresses.</span>
+      </div>
+    </div>
+    <div class="box col">
+      <div class="box-title">2. Verification</div>
+      <div class="box-content">
+        When an agent reports profit, the only "proof" is the agent's own message on chain.<br><br>
+        Off-chain venues (CEXes, Aster, Hyperliquid) leave depositors trusting the agent's word.<br><br>
+        <span class="green">Plinth: cryptographic Underwriter reconciles agent's claim against venue's on-chain trade history.</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="body-text dim" style="margin-top: 40px;">
+    Both must be solved at the infra layer. Plinth is that layer.
+  </p>
+
+  <div class="brand">Plinth · Circle Developer Grant 2026</div>
+  <div class="page-num">2 / 5</div>
+</div>
+
+<!-- ============================================================== -->
+<!--  SLIDE 3 — 5-protocol Stack + Compositions                      -->
+<!-- ============================================================== -->
+<div class="slide">
+  <h2>Five composable protocols, four compositions live on chain</h2>
+  <p class="subtitle">Each protocol is independent. Each composes with Plinth via on-chain bridges.</p>
+
+  <div class="arch">
+    <div class="protocol live-comp">
+      <div class="protocol-name">Cadence</div>
+      <div class="protocol-role">Streaming USDC payments<br><span class="green">× Plinth ✓ LIVE</span></div>
+    </div>
+    <div class="protocol live-comp">
+      <div class="protocol-name">Crucible</div>
+      <div class="protocol-role">Quality-conditional settlement<br><span class="green">× Plinth ✓ LIVE</span></div>
+    </div>
+    <div class="protocol live-comp">
+      <div class="protocol-name">Helm</div>
+      <div class="protocol-role">Futarchy for group decisions<br><span class="green">× Plinth ✓ LIVE</span></div>
+    </div>
+    <div class="protocol live-comp">
+      <div class="protocol-name">Mandate</div>
+      <div class="protocol-role">Capability-bound auth<br><span class="green">× Plinth ✓ LIVE</span></div>
+    </div>
+    <div class="protocol live-comp">
+      <div class="protocol-name">Plinth</div>
+      <div class="protocol-role">Capital layer<br><span class="green">composes with all 4</span></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top: 40px; gap: 16px;">
+    <div class="box col" style="padding: 22px;">
+      <div class="box-title" style="font-size: 22px; margin-bottom: 10px;">#1 — Mandate × Plinth</div>
+      <div class="box-content" style="font-size: 18px; line-height: 1.4;">
+        Issuer-authorized agent deposits. Capability constraint cryptographic, not custodial.
+        <br><span class="mono dim" style="font-size: 14px;">tx 0x4bdb577e...</span>
+      </div>
+    </div>
+    <div class="box col" style="padding: 22px;">
+      <div class="box-title" style="font-size: 22px; margin-bottom: 10px;">#2 — Cadence × Plinth</div>
+      <div class="box-content" style="font-size: 18px; line-height: 1.4;">
+        Management fee routes to agent's streaming-payment escrow. Nanopayments downstream.
+        <br><span class="mono dim" style="font-size: 14px;">0x9E3c322c...</span>
+      </div>
+    </div>
+    <div class="box col" style="padding: 22px;">
+      <div class="box-title" style="font-size: 22px; margin-bottom: 10px;">#3 — Crucible × Plinth</div>
+      <div class="box-content" style="font-size: 18px; line-height: 1.4;">
+        <span class="accent">Quality-proportional</span> fee release. Crucible market resolves → bridge pays % of escrow.
+        <br><span class="mono dim" style="font-size: 14px;">0xa948e265...</span>
+      </div>
+    </div>
+    <div class="box col" style="padding: 22px;">
+      <div class="box-title" style="font-size: 22px; margin-bottom: 10px;">#4 — Helm × Plinth</div>
+      <div class="box-content" style="font-size: 18px; line-height: 1.4;">
+        <span class="accent">Metric-conditional</span> fee. If on-chain milestone met → pay; if not → refund sponsor.
+        <br><span class="mono dim" style="font-size: 14px;">0xdd612ded...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="brand">Plinth · Circle Developer Grant 2026</div>
+  <div class="page-num">3 / 5</div>
+</div>
+
+<!-- ============================================================== -->
+<!--  SLIDE 4 — Killer Feature: Verifiable PnL                       -->
+<!-- ============================================================== -->
+<div class="slide">
+  <h2>Killer feature: cryptographically verifiable PnL</h2>
+  <p class="subtitle">When the trading venue is itself a public chain, "trust my returns" becomes "recomputable from chain."</p>
+
+  <div class="seq-row">
+    <div class="seq-num">1</div>
+    <div class="seq-content">
+      <span class="accent">Agent</span> on Plinth (Arc) creates Vault #5, deploys 0.005 USDC to Aster venue address.<br>
+      <span class="dim mono">tx 0x7b4d547a... · vault BTC perp momentum strategy</span>
+    </div>
+  </div>
+  <div class="seq-row">
+    <div class="seq-num">2</div>
+    <div class="seq-content">
+      <span class="accent">Agent</span> places 3 BTC perp round-trips on Aster L1 mainnet (chainId 1666).<br>
+      <span class="dim mono">Aster userTrades API · 6 fills total · $0.13 experimental cost</span>
+    </div>
+  </div>
+  <div class="seq-row">
+    <div class="seq-num">3</div>
+    <div class="seq-content">
+      <span class="accent">Agent</span> reports realized PnL on Arc: <span class="mono">−0.047207 USDC</span>.<br>
+      <span class="dim mono">tx 0x0f15c4e1...</span>
+    </div>
+  </div>
+  <div class="seq-row">
+    <div class="seq-num">4</div>
+    <div class="seq-content">
+      <span class="green">Independent Underwriter</span> pulls Aster trades, sums gross +0.0172 USDT − 0.0644 fees = <span class="mono">−0.0472 USDT</span>.<br>
+      <span class="dim mono">verifier reads venue chain directly</span>
+    </div>
+  </div>
+  <div class="seq-row">
+    <div class="seq-num">5</div>
+    <div class="seq-content">
+      <span class="green">Matched at <span style="color:#6edca8; font-weight:700;">0.00% delta</span></span> — Underwriter posts VERIFIED review on chain.<br>
+      <span class="dim mono">tx 0x7ee06f9c...</span>
+    </div>
+  </div>
+
+  <p class="body-text" style="margin-top: 40px;">
+    <span class="highlight">Same architecture generalizes</span> to any Arc-native perp DEX (Synthra, Tower Exchange, ...) when their event schemas mature. Grant M5 funds these adapters.
+  </p>
+
+  <div class="brand">Plinth · Circle Developer Grant 2026</div>
+  <div class="page-num">4 / 5</div>
+</div>
+
+<!-- ============================================================== -->
+<!--  SLIDE 5 — State Today + Grant Roadmap                          -->
+<!-- ============================================================== -->
+<div class="slide">
+  <h2>Plinth today + grant funded roadmap</h2>
+
+  <p class="subtitle" style="margin-bottom: 30px;">Already shipped, May 2026:</p>
+
+  <div class="state-grid">
+    <div class="state-card">
+      <div class="state-label">Contracts live</div>
+      <div class="state-value">11 on Arc Testnet</div>
+      <div class="state-detail">PlinthV05/V06, 3 venue adapters, 4 bridges (Mandate/Cadence/Crucible/Helm), SponsorPool, MockVenue</div>
+    </div>
+    <div class="state-card">
+      <div class="state-label">Tests</div>
+      <div class="state-value">176/176 + 3 invariants</div>
+      <div class="state-detail">60K+ random call sequences fuzz-verified · 11-finding pre-deployment audit</div>
+    </div>
+    <div class="state-card">
+      <div class="state-label">On-chain compositions</div>
+      <div class="state-value">4 LIVE</div>
+      <div class="state-detail">Mandate × Plinth · Cadence × Plinth · Crucible × Plinth · Helm × Plinth</div>
+    </div>
+    <div class="state-card">
+      <div class="state-label">Public-goods extraction</div>
+      <div class="state-value">2 OSS deliverables</div>
+      <div class="state-detail">@plinth/verifier-core (npm-ready package) · PlinthSponsorPool (Underwriter sustainability)</div>
+    </div>
+  </div>
+
+  <p class="subtitle" style="margin: 40px 0 20px 0;">Grant funded — $50K USDC across 5 milestones:</p>
+  <table>
+    <tr>
+      <th></th>
+      <th>Milestone</th>
+      <th>Amount</th>
+    </tr>
+    <tr>
+      <td class="tag">M1</td>
+      <td>External audit (Trail of Bits) + 5 third-party agent vaults on testnet</td>
+      <td class="amount">$10K</td>
+    </tr>
+    <tr>
+      <td class="tag">M2</td>
+      <td>Production USYC integration on Base via CCTP — real T-bill yield</td>
+      <td class="amount">$10K</td>
+    </tr>
+    <tr>
+      <td class="tag">M3</td>
+      <td>Plinth × Circle Gateway — unified depositor balance across chains</td>
+      <td class="amount">$10K</td>
+    </tr>
+    <tr>
+      <td class="tag">M4</td>
+      <td>Mainnet deployment + first $5K real TVL + Immunefi bounty</td>
+      <td class="amount">$10K</td>
+    </tr>
+    <tr>
+      <td class="tag">M5</td>
+      <td>Underwriter network growth: @plinth/verifier-core npm-published + 5 venue adapters + SponsorPool TVL milestone</td>
+      <td class="amount">$10K</td>
+    </tr>
+  </table>
+
+  <div class="brand">Plinth · Circle Developer Grant 2026</div>
+  <div class="page-num">5 / 5</div>
+</div>
+
+</body>
+</html>
