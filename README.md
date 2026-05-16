@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-158%2F158%20%2B%203%20invariants-success)](#)
+[![Tests](https://img.shields.io/badge/tests-166%2F166%20%2B%203%20invariants-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.6%20live-brightgreen)](https://testnet.arcscan.app/address/0x17B7B30d324Add96c5dC5d3259746695e94c92C9)
@@ -31,6 +31,7 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **PlinthV06** ⭐ | [`0x17B7B30d324Add96c5dC5d3259746695e94c92C9`](https://testnet.arcscan.app/address/0x17B7B30d324Add96c5dC5d3259746695e94c92C9) | [`0x183557ce...`](https://testnet.arcscan.app/tx/0x183557ce3a5ec5ab40ca72d1176fc9deb2be6ea2291d5a3e9b69a695cc0c23e4) |
 | **CadencePlinthBridge** ⭐ (2nd cross-protocol composition) | [`0x9E3c322c19b13317C662af39994573de6daB5347`](https://testnet.arcscan.app/address/0x9E3c322c19b13317C662af39994573de6daB5347) | [`0xf5cb23cf...`](https://testnet.arcscan.app/tx/0xf5cb23cf4d7e81dc370f66cd53da05296b7ac69fb0b4159b0c524af3e0e15538) |
 | **CruciblePlinthBridge** ⭐ (3rd cross-protocol composition) | [`0xa948e26546c3634da03df8b078b1c8d79ba54a78`](https://testnet.arcscan.app/address/0xa948e26546c3634da03df8b078b1c8d79ba54a78) | [`0xf8a346dd...`](https://testnet.arcscan.app/tx/0xf8a346dd49c8399d20527a185352571a779afcf610fbda7bda19dd0ef27253e5) |
+| **HelmPlinthBridge** ⭐ (4th cross-protocol composition) | [`0xdd612ded1b3972dac53acd7cd0c959a45a82defe`](https://testnet.arcscan.app/address/0xdd612ded1b3972dac53acd7cd0c959a45a82defe) | [`0x4490ffd5...`](https://testnet.arcscan.app/tx/0x4490ffd5b9964a9b9328152d7b4e25e533757fadeb36690e92f9dc8cd6581299) |
 
 v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-venue flag, 80% venue concentration cap, NAV floor auto-close at 10%, whale deposit flag) plus **3 sibling-protocol compositions live** (Mandate × Plinth · Cadence × Plinth · Crucible × Plinth). The 3rd composition — `CruciblePlinthBridge` — implements **quality-conditional management fees**: vault investors escrow a fee budget tied to a Crucible quality market; on resolution, the agent receives a fraction proportional to the scoreBps (0-10000). First on-chain quality-conditional management-fee mechanism in the Arc ecosystem.
 
@@ -132,15 +133,16 @@ All adapter contracts are fully unit-tested against canonical mock counterpartie
 
 **Production wiring path** (documented end-to-end in [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts)): the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue under the same `IYieldVenue` abstraction.
 
-### Sibling protocol composition — three on-chain compositions shipped
+### Sibling protocol composition — four on-chain compositions shipped
 
-Five protocols (Cadence, Crucible, Helm, Mandate, Plinth) ship as independent contracts. The README has long described how they compose architecturally; v0.5 + v0.6 ship **three actual on-chain compositions** — each one a different mechanism:
+Five protocols (Cadence, Crucible, Helm, Mandate, Plinth) ship as independent contracts. The README has long described how they compose architecturally; v0.5 + v0.6 ship **four actual on-chain compositions** — each one a different mechanism for a different kind of fee/credit flow:
 
 | # | Bridge | What it composes | Mechanism |
 |---|---|---|---|
 | 1 | [`MandatePlinthBridge`](contracts/src/MandatePlinthBridge.sol) | Mandate v0 + PlinthV05 | **Capability-bound capital authorization** — institutional issuer authorizes agent-mediated deposits with cryptographic constraints across both protocols |
-| 2 | [`CadencePlinthBridge`](contracts/src/CadencePlinthBridge.sol) | Plinth + Cadence (Arc402) PaymentEscrowV2 | **Management-fee streaming** — vault depositors route fees to the vault's agent via Cadence's Nanopayments rail. Bridge reads agent from Plinth (no spoofing), forwards funds via `depositFor`. Agent then has full Nanopayments downstream: signed claims, batched settlement, session keys. |
-| 3 | [`CruciblePlinthBridge`](contracts/src/CruciblePlinthBridge.sol) | Plinth + CrucibleMarketV6 | **Quality-conditional management fees** — investor escrows fee budget tied to a Crucible quality market. When the market resolves with `scoreBps`, the bridge releases a proportional fraction to the agent and refunds the remainder to the investor. Below a minimum score: full refund. First on-chain implementation of quality-conditional management fees (to the author's knowledge). |
+| 2 | [`CadencePlinthBridge`](contracts/src/CadencePlinthBridge.sol) | Plinth + Cadence (Arc402) PaymentEscrowV2 | **Streaming fee deposit** — vault depositors route fees to the vault's agent via Cadence's Nanopayments rail. Bridge reads agent from Plinth (no spoofing), forwards funds via `depositFor`. Agent then has full Nanopayments downstream: signed claims, batched settlement, session keys. |
+| 3 | [`CruciblePlinthBridge`](contracts/src/CruciblePlinthBridge.sol) | Plinth + CrucibleMarketV6 | **Quality-conditional fee (proportional)** — investor escrows fee budget tied to a Crucible quality market. When the market resolves with `scoreBps`, bridge releases a proportional fraction to the agent and refunds the remainder. Below a minimum score: full refund. **First on-chain implementation of quality-conditional management fees** (to the author's knowledge). |
+| 4 | [`HelmPlinthBridge`](contracts/src/HelmPlinthBridge.sol) | Plinth + Helm futarchy | **Metric-conditional fee (binary)** — investor escrows fee budget tied to a Helm futarchy issue. At resolve time, an oracle attests whether a metric crossed a threshold; if yes, agent collects the full fee; if no, full refund. Useful for "pay agent only if vault reaches $X TVL by date Y" / "pay only if NAV stays above 1.0 by date Y" / etc. **First on-chain futarchy-conditioned management fee.** |
 
 The CadencePlinthBridge is the second-shipped composition. 12 tests cover: end-to-end credit flow, agent-spoofing resistance, per-vault accumulation, multi-vault tracking, sponsorship pattern (funder ≠ agent), zero-value / non-existent-vault / cadence-failure reverts. Deployment: bridge takes `(PlinthV05/V06 address, PaymentEscrowV2 address)` at construction.
 
