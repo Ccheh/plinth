@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-119%2F119%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-133%2F133%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -32,7 +32,18 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 | **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **119/119 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **133/133 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
+
+**v0.6 RiskGuard (just shipped)**: four risk signals previously enforced only by the off-chain `risk-monitor.ts` script are now **on-chain primitives** in [`PlinthV06.sol`](contracts/src/PlinthV06.sol) — no admin key, no off-chain dependency:
+
+| # | Signal | v0.5 | v0.6 |
+|---|---|---|---|
+| 1 | Agent listed as own venue | Risk Monitor flag (off-chain) | `createVault` emits `AgentAsVenueFlag` |
+| 2 | Single-venue > 80% concentration | Risk Monitor flag | `deployToVenue` **REVERTS** with `VenueConcentrationExceeded` |
+| 3 | NAV < 10% of inception | Risk Monitor flag | `reportPnL` **auto-Closes** the vault, investors retain redemption |
+| 4 | Whale deposit > 50% of AUM | Risk Monitor flag | `deposit` emits `WhaleDeposit` for Underwriter pipeline |
+
+This closes the persona-8 critique of v0.5 ("Risk Monitor is a script the author can turn off") — those four protections are now cryptographically enforced for every vault on v0.6, with no recourse to admin keys.
 
 First v0.5 vault on chain ([explorer](https://testnet.arcscan.app/tx/0x5d3fc733eb32502f601741874333abde69c2940b5e071bd92b182116100b4e28)) with deposit cooldown firing as expected: investor deposit `0x2dc4b91c...` → simulated immediate redeem reverts with `SharesPendingVesting (0x6ba41e7c)`.
 
