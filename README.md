@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-166%2F166%20%2B%203%20invariants-success)](#)
+[![Tests](https://img.shields.io/badge/tests-176%2F176%20%2B%203%20invariants-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.6%20live-brightgreen)](https://testnet.arcscan.app/address/0x17B7B30d324Add96c5dC5d3259746695e94c92C9)
@@ -32,6 +32,7 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **CadencePlinthBridge** ⭐ (2nd cross-protocol composition) | [`0x9E3c322c19b13317C662af39994573de6daB5347`](https://testnet.arcscan.app/address/0x9E3c322c19b13317C662af39994573de6daB5347) | [`0xf5cb23cf...`](https://testnet.arcscan.app/tx/0xf5cb23cf4d7e81dc370f66cd53da05296b7ac69fb0b4159b0c524af3e0e15538) |
 | **CruciblePlinthBridge** ⭐ (3rd cross-protocol composition) | [`0xa948e26546c3634da03df8b078b1c8d79ba54a78`](https://testnet.arcscan.app/address/0xa948e26546c3634da03df8b078b1c8d79ba54a78) | [`0xf8a346dd...`](https://testnet.arcscan.app/tx/0xf8a346dd49c8399d20527a185352571a779afcf610fbda7bda19dd0ef27253e5) |
 | **HelmPlinthBridge** ⭐ (4th cross-protocol composition) | [`0xdd612ded1b3972dac53acd7cd0c959a45a82defe`](https://testnet.arcscan.app/address/0xdd612ded1b3972dac53acd7cd0c959a45a82defe) | [`0x4490ffd5...`](https://testnet.arcscan.app/tx/0x4490ffd5b9964a9b9328152d7b4e25e533757fadeb36690e92f9dc8cd6581299) |
+| **PlinthSponsorPool** ⭐ (Underwriter sustainability layer) | [`0xf28a58e71b822e76527032973223e422686068e2`](https://testnet.arcscan.app/address/0xf28a58e71b822e76527032973223e422686068e2) | [`0x40a5b5d4...`](https://testnet.arcscan.app/tx/0x40a5b5d49adb06f0ea09dac027aea6a66150767b74c8152e4f96ad218a7ab53f) |
 
 v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-venue flag, 80% venue concentration cap, NAV floor auto-close at 10%, whale deposit flag) plus **3 sibling-protocol compositions live** (Mandate × Plinth · Cadence × Plinth · Crucible × Plinth). The 3rd composition — `CruciblePlinthBridge` — implements **quality-conditional management fees**: vault investors escrow a fee budget tied to a Crucible quality market; on resolution, the agent receives a fraction proportional to the scoreBps (0-10000). First on-chain quality-conditional management-fee mechanism in the Arc ecosystem.
 
