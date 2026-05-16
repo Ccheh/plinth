@@ -10,7 +10,7 @@
 [![Tests](https://img.shields.io/badge/tests-145%2F145%20%2B%203%20invariants-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
-[![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
+[![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.6%20live-brightgreen)](https://testnet.arcscan.app/address/0x17B7B30d324Add96c5dC5d3259746695e94c92C9)
 
 ### Aligned with Arc Blueprints
 
@@ -24,13 +24,22 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **[Capital Markets Settlement](https://www.arc.io/blog/how-arc-supports-capital-markets-settlement-arc-blueprints)** | Verifiable PnL = settlement primitive: when the trading venue is itself a public chain (Aster L1, Synthra perp on Arc), an independent Underwriter reconciles agent-reported PnL cryptographically. Vault #5: matched to 0.00% delta on chain |
 | **[Onchain Credit Markets](https://www.arc.io/blog/how-arc-supports-onchain-credit-markets-arc-blueprints)** | `MandatePlinthBridge` is the first on-chain sibling-protocol composition: institutional issuers authorize agent-mediated deposits with cryptographic capability constraints across both protocols — capability-bound credit. [`Live tx`](https://testnet.arcscan.app/tx/0x4bdb577e6c4698cae3f2f3a8cc010e0cb9d95cb6e06ba83a5580e3bf72fec4ea) |
 
-### v0.5 on Arc Testnet (recommended — security hardened)
+### v0.6 on Arc Testnet (recommended — RiskGuard + Cadence composition)
+
+| Contract | Address | Deploy tx |
+|---|---|---|
+| **PlinthV06** ⭐ | [`0x17B7B30d324Add96c5dC5d3259746695e94c92C9`](https://testnet.arcscan.app/address/0x17B7B30d324Add96c5dC5d3259746695e94c92C9) | [`0x183557ce...`](https://testnet.arcscan.app/tx/0x183557ce3a5ec5ab40ca72d1176fc9deb2be6ea2291d5a3e9b69a695cc0c23e4) |
+| **CadencePlinthBridge** ⭐ (2nd cross-protocol composition) | [`0x9E3c322c19b13317C662af39994573de6daB5347`](https://testnet.arcscan.app/address/0x9E3c322c19b13317C662af39994573de6daB5347) | [`0xf5cb23cf...`](https://testnet.arcscan.app/tx/0xf5cb23cf4d7e81dc370f66cd53da05296b7ac69fb0b4159b0c524af3e0e15538) |
+
+v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-venue flag, 80% venue concentration cap, NAV floor auto-close at 10%, whale deposit flag) and a second sibling-protocol composition (Plinth × Cadence Nanopayments).
+
+### v0.5 on Arc Testnet (security-hardened, still live as historical reference)
 
 | Contract | Address | Deploy tx |
 |---|---|---|
 | **PlinthV05** | [`0xba1b087b0ac77b398c250a9fd7e298f3f96addc7`](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7) | [`0x55bd1dce...`](https://testnet.arcscan.app/tx/0x55bd1dced631429fa86357d54030004feafc91e687863cddd0cddbb489f2a91d) |
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
-| **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
+| **MandatePlinthBridge** (1st Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
 Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **145/145 unit tests + 3 stateful invariants** (5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 12 Cadence×Plinth bridge + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 67 other + 3 fuzz-verified invariants: solvency, deployedAUM ledger consistency, shares conservation — verified across 60K+ random call sequences over 250s of fuzzing).
 
