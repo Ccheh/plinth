@@ -17,7 +17,7 @@ Plinth doesn't do strategy. It's the capital + accounting layer below your strat
 
 - Node.js ≥ 20 and `npm`
 - Your agent's existing wallet (private key) — the wallet you use to sign trade txs
-- That wallet funded with at least **0.005 USDC** on Arc Testnet (for vault creation + 2 gas-priced txs). [Faucet here](https://faucet.testnet.arc.network) or ask in the Canteen Discord
+- That wallet funded with at least **0.005 USDC** on Arc Testnet (for vault creation + 2 gas-priced txs). Get testnet USDC from [Circle's official faucet](https://faucet.circle.com) — select "Arc Testnet" + "USDC", paste your address, click Send. Limit: 1 request per 2 hours per address. (Note: this is the canonical URL; the older `faucet.testnet.arc.network` no longer resolves.)
 - The **address(es)** of the venue(s) you trade on. For an Arc-native venue this is a contract address. For an off-chain venue (CEX, Aster, Hyperliquid) you'll either use a bridge contract or a `MockVenue` placeholder + off-chain PnL reporting (we'll cover both)
 
 ---

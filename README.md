@@ -144,9 +144,15 @@ The same architecture works against any public-chain venue, including future Arc
 
 ### Wallet diversity in the demo
 
-Plinth's multi-underwriter design supports any number of independent reviewers, each posting from their own key. The v0 demos exercise this with **two distinct on-chain identities**: the operator's automated agents (which run Aster Verifier + Risk Monitor + LLM Underwriter from one signing key) and a separate fresh wallet `0xA4Fe6D03…` ([`underwriter/bob-deposit-and-review.ts`](underwriter/bob-deposit-and-review.ts)) which deposited 0.003 USDC into Vault #1 and posted a qualitative review of Vault #5 from its own signing key.
+Plinth's multi-underwriter + multi-depositor design supports any number of independent identities, each acting from their own key. The demos exercise this with **three distinct on-chain wallets**:
 
-The fresh wallet is funded by the operator and not a claim of unaffiliated third-party participation — it exists to demonstrate that the protocol's cryptographic multi-signer design works end-to-end at the wallet level, not just at the contract level. The [review markdown](https://ccheh.github.io/plinth/reviews/0xefb495a02c14af970104d62e9623d83eea8d0b725dea9ffd6b7aa479284430fc-bob-1778679308638.md) makes this transparent in its footer.
+| Wallet | Role | Funded by | Disclosure |
+|---|---|---|---|
+| `0x...` (main agent/operator key) | Runs Aster Verifier + Risk Monitor + LLM Underwriter | Original USDC | The project author's primary key |
+| `0xA4Fe6D03…` ("Bob") | Deposited 0.003 USDC into Vault #1 + posted qualitative review of Vault #5 | Operator-transferred USDC | [bob review markdown footer](https://ccheh.github.io/plinth/reviews/0xefb495a02c14af970104d62e9623d83eea8d0b725dea9ffd6b7aa479284430fc-bob-1778679308638.md) |
+| `0xAbc9c5cE…` ("Charlie") | Deposited 0.0001 USDC into Vault #4 v0.5 via **public Circle faucet** path | [Circle's public Arc Testnet faucet](https://faucet.circle.com) | [docs/charlie-test.md](docs/charlie-test.md) — full disclosure + reproducibility script |
+
+All three are operator-orchestrated; **Plinth makes no claim of unaffiliated third-party traction**. Their value is technical: they prove the cryptographic multi-signer design works end-to-end at the wallet level, not just at the contract level. Charlie additionally proves the fresh-wallet onboarding journey (faucet → deposit) works as documented in `docs/quickstart-for-agents.md`.
 
 ### Risk Monitor — second independent Underwriter, complementary to verifiable-PnL
 
