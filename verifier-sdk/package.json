@@ -1,0 +1,59 @@
+{
+  "name": "@plinth/verifier-core",
+  "version": "0.1.0",
+  "description": "Verifier-SDK for Plinth-style on-chain fund infrastructure. Generic IPerpVerifier interface + reference implementations (Aster L1, Synthra Perp). Any protocol that needs to cryptographically reconcile a trader's on-chain claim against a venue's trade history can use this.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./aster": {
+      "import": "./dist/aster/index.js",
+      "types": "./dist/aster/index.d.ts"
+    },
+    "./synthra": {
+      "import": "./dist/synthra/index.js",
+      "types": "./dist/synthra/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "plinth",
+    "verifier",
+    "verifiable-pnl",
+    "arc",
+    "circle",
+    "underwriter",
+    "perp-dex",
+    "fund-management"
+  ],
+  "author": "Zen Chen <ccheh4@gmail.com> (https://github.com/Ccheh)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ccheh/plinth.git",
+    "directory": "verifier-sdk"
+  },
+  "homepage": "https://github.com/Ccheh/plinth/tree/main/verifier-sdk",
+  "dependencies": {
+    "viem": "^2.48.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
