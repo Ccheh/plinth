@@ -111,7 +111,7 @@ async function main() {
 
     console.log(`  ${verdictDecoration} Verdict: ${report.verdict}`);
     console.log(`     claim   : ${report.claim.reportedPnlUsdc.toFixed(6)} USDC`);
-    console.log(`     venue   : ${report.venue.netRealizedUsdt.toFixed(6)} USDT (${report.venue.tradeCount} fills)`);
+    console.log(`     venue   : ${report.venue.netRealizedUsdc.toFixed(6)} USDC (${report.venue.eventCount} fills)`);
     console.log(`     delta   : ${report.delta.absUsdc.toFixed(6)} USDC (${report.delta.pct.toFixed(2)}%)`);
     if (report.notes.length > 0) {
       console.log(`     note    : ${report.notes[0]}`);

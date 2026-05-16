@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-108%2F108%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-119%2F119%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -91,8 +91,11 @@ The Verifier pattern from Aster L1 applies identically: any third party can read
 |---|---|---|
 | [`MockYieldVenue`](contracts/src/MockYieldVenue.sol) | ✅ Live on Arc Testnet | Fixed 5% APR simple-interest mock |
 | [`MorphoVenueAdapter`](contracts/src/MorphoVenueAdapter.sol) | 🟡 Scaffold (placeholder mode) — production-ready, awaiting Morpho's Arc deployment | Morpho Vault V2 (ERC-4626) |
+| [`SynthraSpotVenue`](contracts/src/SynthraSpotVenue.sol) | 🟡 Scaffold (placeholder mode) — production-ready, deploy with Synthra's verified SwapRouter address | Synthra v3 spot AMM (Uniswap v3 fork on Arc) |
 
-The adapter contract is fully unit-tested against a canonical ERC-4626 mock vault (10 tests covering placeholder + production modes, full lifecycle from deposit → yield accrual → harvest → principal-return). When Morpho lands on Arc, `MorphoVenueAdapter` constructor takes the real vault address and the placeholder gate flips off — zero changes to Plinth.
+All adapter contracts are fully unit-tested against canonical mock counterparties (21 new tests covering placeholder + production modes, full lifecycle, slippage protection, agent-only access control). When Morpho lands on Arc, `MorphoVenueAdapter` constructor takes the real vault address and the placeholder gate flips off — zero changes to Plinth. Same pattern for Synthra spot.
+
+**Verifier abstraction (v0.6)**: The Underwriter pipeline now operates against a venue-agnostic [`IPerpVerifier`](aster/perp-verifier.ts) interface. `AsterVerifier` (cross-chain via Aster L1) and `SynthraPerpVerifier` (Arc-native scaffold) both implement it, so a single Underwriter codebase reconciles agent reportPnL against any registered venue.
 
 **Production wiring path** (documented end-to-end in [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts)): the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue under the same `IYieldVenue` abstraction.
 

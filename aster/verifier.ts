@@ -6,10 +6,22 @@
  * endpoint, sums the realized PnL across all fills in the time window, and
  * compares to the on-Arc claim.
  *
- * Output is a structured verdict that the Underwriter posts on chain via
- * postUnderwriterReview(vaultId, reviewHash, reviewUri).
+ * Output is a structured verdict (`VerificationReport`) that the Underwriter
+ * posts on chain via `postUnderwriterReview(vaultId, reviewHash, reviewUri)`.
+ *
+ * As of v0.6, `AsterVerifier` implements the `IPerpVerifier` interface
+ * (see `perp-verifier.ts`) so the Underwriter pipeline is venue-agnostic.
+ * Future verifiers — `SynthraPerpVerifier`, etc. — plug into the same
+ * pipeline by implementing the same interface.
  */
 import { AsterClient } from "./client.js";
+import {
+  IPerpVerifier,
+  VerificationReport,
+  VerifyReportArgs,
+  VenueIdentity,
+  classify,
+} from "./perp-verifier.js";
 
 export type Trade = {
   id: number;
@@ -27,54 +39,31 @@ export type Trade = {
   maker: boolean;
 };
 
-export type VerificationVerdict =
-  | "VERIFIED"          // claim matches venue history within tolerance
-  | "OVERSTATED"        // claim higher than venue history
-  | "UNDERSTATED"       // claim lower than venue history (less concerning but suspicious)
-  | "NO_VENUE_ACTIVITY" // claim made but zero trades found on Aster
-  | "INCONCLUSIVE";     // partial data, can't decide
-
-export type VerificationReport = {
-  verdict: VerificationVerdict;
-  vaultId: string;
-  symbol: string;
-  windowStart: number;
-  windowEnd: number;
-  claim: {
-    reportedPnlWei: string;      // raw on-chain reportedPnL (18 dec)
-    reportedPnlUsdc: number;     // human-readable
-  };
-  venue: {
-    chain: "Aster L1";
-    chainId: 1666;
-    explorerNote: string;
-    tradeCount: number;
-    openTrades: Trade[];
-    closeTrades: Trade[];
-    realizedPnlUsdt: number;
-    totalCommissionUsdt: number;
-    netRealizedUsdt: number;      // realized - commissions
-  };
-  delta: {
-    absUsdc: number;              // |reported - venue net|
-    pct: number;                  // delta / max(|reported|, |venue|) * 100
-  };
-  generatedAt: number;
-  notes: string[];
+/** Aster-specific raw data attached to `VerificationReport.venueSpecific`. */
+export type AsterVenueSpecific = {
+  openTrades: Trade[];
+  closeTrades: Trade[];
+  /** Original Aster-native values, before USDC-equivalent conversion (kept for audit). */
+  realizedPnlUsdtRaw: number;
+  totalCommissionUsdtRaw: number;
 };
 
 const TOLERANCE_PCT = 5;  // 5% delta accepted as "VERIFIED" (covers slippage + 18→6 decimal rounding)
 
-export class AsterVerifier {
+const ASTER_IDENTITY: VenueIdentity = {
+  name: "Aster L1",
+  chain: "Aster L1",
+  chainId: 1666,
+  explorerNote: "Aster L1 trades are accessible via /fapi/v3/userTrades and reflect on-chain fills.",
+};
+
+export class AsterVerifier implements IPerpVerifier {
   constructor(private aster: AsterClient) {}
 
-  async verifyReport(args: {
-    vaultId: string;
-    symbol: string;
-    reportedPnlWei: bigint;      // signed
-    windowStartMs: number;
-    windowEndMs?: number;
-  }): Promise<VerificationReport> {
+  readonly identity: VenueIdentity = ASTER_IDENTITY;
+  readonly tolerancePct: number = TOLERANCE_PCT;
+
+  async verifyReport(args: VerifyReportArgs): Promise<VerificationReport> {
     const end = args.windowEndMs ?? Date.now();
     const start = args.windowStartMs;
 
@@ -108,43 +97,47 @@ export class AsterVerifier {
     );
     const netRealizedUsdt = realizedPnlUsdt - totalCommissionUsdt;
 
-    // Compute delta against reported (treating USDT ≈ USDC 1:1 for purposes of this demo;
-    // both are dollar-pegged, and the agent's reportedPnL is denominated in vault USDC).
-    const absDelta = Math.abs(reportedUsdc - netRealizedUsdt);
-    const denom = Math.max(Math.abs(reportedUsdc), Math.abs(netRealizedUsdt), 1e-9);
-    const pct = (absDelta / denom) * 100;
+    // Treat USDT ≈ USDC 1:1 for purposes of this demo; both are dollar-pegged,
+    // and the agent's reportedPnL is denominated in vault USDC.
+    const netRealizedUsdc = netRealizedUsdt;
 
-    let verdict: VerificationVerdict;
+    // Centralized verdict classification (shared with other verifiers).
+    const { verdict, deltaAbs, deltaPct } = classify(
+      reportedUsdc,
+      netRealizedUsdc,
+      trades.length,
+      TOLERANCE_PCT,
+    );
+
     const notes: string[] = [];
-
     if (fetchNote) notes.push(fetchNote);
 
-    if (trades.length === 0) {
-      if (Math.abs(reportedUsdc) < 1e-6) {
-        verdict = "VERIFIED";
-        notes.push("Zero claim + zero venue activity — vacuously consistent.");
-      } else {
-        verdict = "NO_VENUE_ACTIVITY";
-        notes.push(
-          `Agent reported ${reportedUsdc.toFixed(6)} USDC PnL but no Aster trades found in window ${new Date(start).toISOString()} → ${new Date(end).toISOString()}.`,
-        );
-      }
-    } else if (pct <= TOLERANCE_PCT) {
-      verdict = "VERIFIED";
+    if (trades.length === 0 && Math.abs(reportedUsdc) >= 1e-6) {
       notes.push(
-        `${trades.length} trades on Aster ${args.symbol} between window. Net realized ${netRealizedUsdt.toFixed(6)} USDT vs claim ${reportedUsdc.toFixed(6)} USDC (delta ${pct.toFixed(2)}%) within ${TOLERANCE_PCT}% tolerance.`,
+        `Agent reported ${reportedUsdc.toFixed(6)} USDC PnL but no Aster trades found in window ${new Date(start).toISOString()} → ${new Date(end).toISOString()}.`,
       );
-    } else if (reportedUsdc > netRealizedUsdt) {
-      verdict = "OVERSTATED";
+    } else if (trades.length === 0) {
+      notes.push("Zero claim + zero venue activity — vacuously consistent.");
+    } else if (verdict === "VERIFIED") {
       notes.push(
-        `Agent claims +${reportedUsdc.toFixed(6)} USDC but venue shows only ${netRealizedUsdt.toFixed(6)} USDT (delta ${pct.toFixed(2)}%). Possible NAV inflation.`,
+        `${trades.length} trades on Aster ${args.symbol} between window. Net realized ${netRealizedUsdt.toFixed(6)} USDT vs claim ${reportedUsdc.toFixed(6)} USDC (delta ${deltaPct.toFixed(2)}%) within ${TOLERANCE_PCT}% tolerance.`,
       );
-    } else {
-      verdict = "UNDERSTATED";
+    } else if (verdict === "OVERSTATED") {
       notes.push(
-        `Agent claims +${reportedUsdc.toFixed(6)} USDC but venue shows ${netRealizedUsdt.toFixed(6)} USDT (delta ${pct.toFixed(2)}%). Less concerning but inconsistent.`,
+        `Agent claims +${reportedUsdc.toFixed(6)} USDC but venue shows only ${netRealizedUsdt.toFixed(6)} USDT (delta ${deltaPct.toFixed(2)}%). Possible NAV inflation.`,
+      );
+    } else if (verdict === "UNDERSTATED") {
+      notes.push(
+        `Agent claims +${reportedUsdc.toFixed(6)} USDC but venue shows ${netRealizedUsdt.toFixed(6)} USDT (delta ${deltaPct.toFixed(2)}%). Less concerning but inconsistent.`,
       );
     }
+
+    const venueSpecific: AsterVenueSpecific = {
+      openTrades,
+      closeTrades,
+      realizedPnlUsdtRaw: realizedPnlUsdt,
+      totalCommissionUsdtRaw: totalCommissionUsdt,
+    };
 
     return {
       verdict,
@@ -157,22 +150,19 @@ export class AsterVerifier {
         reportedPnlUsdc: reportedUsdc,
       },
       venue: {
-        chain: "Aster L1",
-        chainId: 1666,
-        explorerNote: "Aster L1 trades are accessible via /fapi/v3/userTrades and reflect on-chain fills.",
-        tradeCount: trades.length,
-        openTrades,
-        closeTrades,
-        realizedPnlUsdt,
-        totalCommissionUsdt,
-        netRealizedUsdt,
+        ...ASTER_IDENTITY,
+        eventCount: trades.length,
+        realizedPnlGrossUsdc: realizedPnlUsdt,
+        totalFeesUsdc: totalCommissionUsdt,
+        netRealizedUsdc,
       },
       delta: {
-        absUsdc: absDelta,
-        pct,
+        absUsdc: deltaAbs,
+        pct: deltaPct,
       },
       generatedAt: Date.now(),
       notes,
+      venueSpecific,
     };
   }
 
@@ -195,16 +185,24 @@ export class AsterVerifier {
     lines.push(`- Reported PnL: **${r.claim.reportedPnlUsdc.toFixed(6)} USDC**`);
     lines.push(`- Raw wei: \`${r.claim.reportedPnlWei}\``);
     lines.push("");
-    lines.push(`## Venue evidence (Aster L1, chainId 1666)`);
-    lines.push(`- Trade count: ${r.venue.tradeCount} fills`);
-    lines.push(`- Opens: ${r.venue.openTrades.length}, Closes: ${r.venue.closeTrades.length}`);
-    lines.push(`- Sum realizedPnl: **${r.venue.realizedPnlUsdt.toFixed(6)} USDT**`);
-    lines.push(`- Sum commissions: ${r.venue.totalCommissionUsdt.toFixed(6)} USDT`);
-    lines.push(`- **Net realized**: ${r.venue.netRealizedUsdt.toFixed(6)} USDT`);
+    lines.push(`## Venue evidence (${r.venue.name}, chainId ${r.venue.chainId})`);
+    lines.push(`- Event count: ${r.venue.eventCount} fills`);
+
+    // Aster-specific detail, if present
+    const av = r.venueSpecific as AsterVenueSpecific | undefined;
+    if (av) {
+      lines.push(`- Opens: ${av.openTrades.length}, Closes: ${av.closeTrades.length}`);
+      lines.push(`- Sum realizedPnl: **${av.realizedPnlUsdtRaw.toFixed(6)} USDT**`);
+      lines.push(`- Sum commissions: ${av.totalCommissionUsdtRaw.toFixed(6)} USDT`);
+    } else {
+      lines.push(`- Gross realized: ${r.venue.realizedPnlGrossUsdc.toFixed(6)} USDC`);
+      lines.push(`- Total fees: ${r.venue.totalFeesUsdc.toFixed(6)} USDC`);
+    }
+    lines.push(`- **Net realized**: ${r.venue.netRealizedUsdc.toFixed(6)} USDC`);
     lines.push("");
-    if (r.venue.closeTrades.length > 0) {
+    if (av && av.closeTrades.length > 0) {
       lines.push(`### Closing fills`);
-      for (const t of r.venue.closeTrades) {
+      for (const t of av.closeTrades) {
         lines.push(
           `- id ${t.id} | ${t.side} ${t.qty} @ ${t.price} → realizedPnl ${t.realizedPnl} (${new Date(t.time).toISOString()})`,
         );
@@ -223,3 +221,6 @@ export class AsterVerifier {
     return lines.join("\n");
   }
 }
+
+// Re-export common types so existing consumers don't have to change imports.
+export type { VerificationReport, VerificationVerdict } from "./perp-verifier.js";
