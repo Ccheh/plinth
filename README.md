@@ -7,7 +7,7 @@
 > infrastructure for the agentic economy.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-133%2F133%20passing-success)](#)
+[![Tests](https://img.shields.io/badge/tests-145%2F145%20passing-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
 [![Audit](https://img.shields.io/badge/security--audit-11%20findings%20documented-orange)](docs/security-audit.md)
 [![Arc Testnet](https://img.shields.io/badge/Arc%20Testnet-v0.5%20live-blue)](https://testnet.arcscan.app/address/0xba1b087b0ac77b398c250a9fd7e298f3f96addc7)
@@ -32,7 +32,7 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 | **MandatePlinthBridge** (Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **133/133 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **145/145 forge tests pass** (52 invariant + 5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 12 Cadence×Plinth bridge + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 15 other coverage).
 
 **v0.6 RiskGuard (just shipped)**: four risk signals previously enforced only by the off-chain `risk-monitor.ts` script are now **on-chain primitives** in [`PlinthV06.sol`](contracts/src/PlinthV06.sol) — no admin key, no off-chain dependency:
 
@@ -122,9 +122,22 @@ All adapter contracts are fully unit-tested against canonical mock counterpartie
 
 **Production wiring path** (documented end-to-end in [`yield-strategy.ts`](sdk-ts/examples/yield-strategy.ts)): the real **USYC** token on Base (Circle's tokenized US Treasury Bills), bridge Arc USDC↔Base via **CCTP** using `@circle-fin` SDKs. The Plinth contract itself is unchanged — USYC just slots in as another approvedVenue under the same `IYieldVenue` abstraction.
 
-### Sibling protocol composition — Mandate × Plinth on chain
+### Sibling protocol composition — two on-chain compositions shipped
 
-Five protocols (Cadence, Crucible, Helm, Mandate, Plinth) ship as independent contracts. The README has long described how they compose architecturally; v0.5 ships the first **actual on-chain composition** between two of them — Mandate authorizing Plinth-vault deposits via a bridge contract.
+Five protocols (Cadence, Crucible, Helm, Mandate, Plinth) ship as independent contracts. The README has long described how they compose architecturally; v0.5 + v0.6 ship **two actual on-chain compositions**:
+
+| # | Bridge | What it composes | Purpose |
+|---|---|---|---|
+| 1 | [`MandatePlinthBridge`](contracts/src/MandatePlinthBridge.sol) | Mandate v0 + PlinthV05 | Capability-bound capital authorization — institutional issuer authorizes agent-mediated deposits with cryptographic constraints across both protocols |
+| 2 | [`CadencePlinthBridge`](contracts/src/CadencePlinthBridge.sol) | Plinth + Cadence (Arc402) PaymentEscrowV2 | Management-fee streaming — vault depositors (or anyone) route fees to the vault's agent via Cadence's Nanopayments rail. Bridge reads agent from Plinth (no spoofing), forwards funds to Cadence via `depositFor`. Agent then has full Nanopayments downstream: signed claims, batched settlement, session keys. |
+
+The CadencePlinthBridge is the second-shipped composition. 12 tests cover: end-to-end credit flow, agent-spoofing resistance, per-vault accumulation, multi-vault tracking, sponsorship pattern (funder ≠ agent), zero-value / non-existent-vault / cadence-failure reverts. Deployment: bridge takes `(PlinthV05/V06 address, PaymentEscrowV2 address)` at construction.
+
+Below: the original Mandate × Plinth composition still ships unchanged.
+
+### Mandate × Plinth on chain (first composition)
+
+The original Mandate composition: Mandate authorizes Plinth-vault deposits via a bridge contract.
 
 The story it enables: an institutional issuer (bank, fund, corporate treasury — typically a multi-sig) creates a Mandate authorizing an AI agent to deposit USDC into a specific Plinth Vault, bounded by spend ceiling + counterparty whitelist + purpose whitelist + time window. The agent calls [`MandatePlinthBridge.depositViaMandate`](contracts/src/MandatePlinthBridge.sol) which atomically pulls capital out of the mandate (Mandate.execute) and deposits it into the vault (Plinth.deposit), with shares recorded under the mandate's issuer. Even if the agent's private key is compromised, the agent cannot redeem the shares — capability constraint preserved across both protocols.
 
