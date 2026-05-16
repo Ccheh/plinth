@@ -34,7 +34,7 @@ Plinth is infrastructure that hits **5 of Circle's 9 official [Arc Blueprints](h
 | **HelmPlinthBridge** ⭐ (4th cross-protocol composition) | [`0xdd612ded1b3972dac53acd7cd0c959a45a82defe`](https://testnet.arcscan.app/address/0xdd612ded1b3972dac53acd7cd0c959a45a82defe) | [`0x4490ffd5...`](https://testnet.arcscan.app/tx/0x4490ffd5b9964a9b9328152d7b4e25e533757fadeb36690e92f9dc8cd6581299) |
 | **PlinthSponsorPool** ⭐ (Underwriter sustainability layer) | [`0xf28a58e71b822e76527032973223e422686068e2`](https://testnet.arcscan.app/address/0xf28a58e71b822e76527032973223e422686068e2) | [`0x40a5b5d4...`](https://testnet.arcscan.app/tx/0x40a5b5d49adb06f0ea09dac027aea6a66150767b74c8152e4f96ad218a7ab53f) |
 
-v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-venue flag, 80% venue concentration cap, NAV floor auto-close at 10%, whale deposit flag) plus **3 sibling-protocol compositions live** (Mandate × Plinth · Cadence × Plinth · Crucible × Plinth). The 3rd composition — `CruciblePlinthBridge` — implements **quality-conditional management fees**: vault investors escrow a fee budget tied to a Crucible quality market; on resolution, the agent receives a fraction proportional to the scoreBps (0-10000). First on-chain quality-conditional management-fee mechanism in the Arc ecosystem.
+v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-venue flag, 80% venue concentration cap, NAV floor auto-close at 10%, whale deposit flag) plus **4 sibling-protocol compositions live** (Mandate × Plinth · Cadence × Plinth · Crucible × Plinth · Helm × Plinth) and the `PlinthSponsorPool` sustainability layer for the Underwriter network. The 3rd composition — `CruciblePlinthBridge` — implements **quality-proportional management fees**: vault investors escrow a fee budget tied to a Crucible quality market; on resolution, the agent receives a fraction proportional to the scoreBps (0–10000). The 4th — `HelmPlinthBridge` — implements **metric-conditional fee release**: at the milestone deadline, an oracle reads whether the vault's on-chain metric (e.g. NAV growth ≥ X bps) was met; if yes, the agent receives the full escrow, if no, the sponsor is fully refunded. Together these are the first on-chain quality-conditional + metric-conditional management-fee mechanisms in the Arc ecosystem.
 
 ### v0.5 on Arc Testnet (security-hardened, still live as historical reference)
 
@@ -44,7 +44,7 @@ v0.6 adds on-chain enforcement of 4 risk signals previously off-chain (agent-as-
 | **MockYieldVenue** (T-bill cash-sweep) | [`0xe5cceca53ccb15affc58016e1757e1a138ef3144`](https://testnet.arcscan.app/address/0xe5cceca53ccb15affc58016e1757e1a138ef3144) | [`0x8714eb2d...`](https://testnet.arcscan.app/tx/0x8714eb2d72daf7e7d49a1db95a80a78f94f6214669448c841817ca432cb837b9) |
 | **MandatePlinthBridge** (1st Plinth × Mandate compose) | [`0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50`](https://testnet.arcscan.app/address/0x0b92b6e4fa26e6c2b10a5c668d8313a1bf8c3f50) | [`0x9a7c9f97...`](https://testnet.arcscan.app/tx/0x9a7c9f97ef67167d9c2114002da220ec548cb18b524fbe9af221122a48a32057) |
 
-Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **145/145 unit tests + 3 stateful invariants** (5 exploit POCs + 18 v0.5 defense + 14 v0.6 RiskGuard + 12 Cadence×Plinth bridge + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot + 67 other + 3 fuzz-verified invariants: solvency, deployedAUM ledger consistency, shares conservation — verified across 60K+ random call sequences over 250s of fuzzing).
+Closes **6 audit findings** vs v0 ([full report](docs/security-audit.md)): sandwich-on-reportPnL, returnFromVenue griefing, reportPnL inflation rug, reportPnL on Closed vault, reportPnL magnitude overflow, strategyDescriptor unbounded length. **176/176 unit tests + 3 stateful invariants** across 10 test suites (57 v0 + 33 v0.5 + 14 v0.6 RiskGuard + 12 Cadence × Plinth + 13 Crucible × Plinth + 8 Helm × Plinth + 10 SponsorPool + 8 yield-strategy + 10 Morpho adapter + 11 Synthra spot, plus 3 fuzz-verified invariants: solvency, deployedAUM ledger consistency, shares conservation — verified across 60K+ random call sequences over 250s of fuzzing).
 
 **v0.6 RiskGuard (just shipped)**: four risk signals previously enforced only by the off-chain `risk-monitor.ts` script are now **on-chain primitives** in [`PlinthV06.sol`](contracts/src/PlinthV06.sol) — no admin key, no off-chain dependency:
 
@@ -163,7 +163,7 @@ Live on Arc Testnet:
   3. Bridge.depositViaMandate triggered: atomic Mandate.execute → Plinth.deposit ([composed tx](https://testnet.arcscan.app/tx/0x4bdb577e6c4698cae3f2f3a8cc010e0cb9d95cb6e06ba83a5580e3bf72fec4ea))
   - Final state on chain: Mandate.spent = 0.005 USDC ✓, Bridge.sharesOfMandate[mandate][vault] = 0.005 ✓, Plinth.inVault on vault += 0.005 ✓
 
-This is the first **real architectural compose** of sibling protocols, not just README cross-references. Cadence + Plinth (per-call fees on vault redeem), Crucible + Plinth (vault performance scored as agent quality), and Helm + Plinth (agent DAO voting on vault parameters) follow the same bridge pattern.
+This was the first **real architectural compose** of sibling protocols, not just README cross-references. The same bridge pattern is now also shipped for the other three: **Cadence × Plinth** (management fee streaming via Nanopayments), **Crucible × Plinth** (quality-proportional fee release scored by Schelling market), and **Helm × Plinth** (metric-conditional fee on on-chain milestone) — all live on Arc Testnet, addresses in the v0.6 table above.
 
 ### Verifiable PnL — agent's claim matched against Aster L1 trade history
 
@@ -204,7 +204,7 @@ Notably: **Vault #5 has TWO reviews from independent underwriters that disagree 
 
 For the gaps the v0 contract intentionally does NOT enforce (per-call size caps, NAV-drop circuit breakers, PnL rate limits, etc.), see [`docs/risk-controls.md`](docs/risk-controls.md) for the v0.5 `RiskGuard` interface and implementation roadmap.
 
-> **Read this first.** Plinth v0 is live on Arc Testnet, 1 real third-party-venue lifecycle ran successfully (Aster L1, 3 round-trips, $0.13 experimental cost), 52 forge tests pass, audit pending. The pitch: AI agents on Arc need a way to *raise* and *manage* external capital with cryptographically verifiable PnL — currently they don't have one. Plinth is that primitive.
+> **Read this first.** Plinth has shipped through v0.6 on Arc Testnet — 11 contracts live (PlinthV05/V06 + 3 venue adapters + 4 sibling-protocol bridges + SponsorPool + MockVenue), 176/176 forge tests + 3 stateful invariants (60K+ fuzz runs), 11-finding pre-deployment audit with exploit POC + defense test for every Critical/High. One real third-party-venue lifecycle ran end-to-end (Aster L1, 3 BTC perp round-trips, $0.13 experimental cost), matched at 0.00% delta on chain. The pitch: AI agents on Arc need a way to *raise* and *manage* external capital with cryptographically verifiable PnL — currently they don't have one. Plinth is that primitive.
 
 ---
 
@@ -289,15 +289,15 @@ What the agent CAN do badly (documented openly):
 
 ## Why this fits the agentic economy on Arc
 
-The 4 protocols already shipped form a stack:
+The 5 protocols already shipped form a stack:
 
-| Protocol | Solves |
-|---|---|
-| [Cadence](https://github.com/Ccheh/arc402) | How agents *pay* (per-call USDC) |
-| [Crucible](https://github.com/Ccheh/crucible) | How agents are *scored* on output quality |
-| [Helm](https://github.com/Ccheh/helm) | How agent *groups decide* (futarchy) |
-| [Mandate](https://github.com/Ccheh/mandate) | How institutions *authorize* agents |
-| **Plinth** (this) | How agents *raise capital* from external investors |
+| Protocol | Solves | × Plinth |
+|---|---|---|
+| [Cadence](https://github.com/Ccheh/arc402) | How agents *pay* (per-call USDC) | ✓ CadencePlinthBridge live |
+| [Crucible](https://github.com/Ccheh/crucible) | How agents are *scored* on output quality | ✓ CruciblePlinthBridge live |
+| [Helm](https://github.com/Ccheh/helm) | How agent *groups decide* (futarchy) | ✓ HelmPlinthBridge live |
+| [Mandate](https://github.com/Ccheh/mandate) | How institutions *authorize* agents | ✓ MandatePlinthBridge live |
+| **Plinth** (this) | How agents *raise capital* from external investors | — composes with all 4 |
 
 Plinth is the missing capital layer. Without it, an AI agent can run a great
 strategy but only on its own funds. With it, the same agent can attract
@@ -325,41 +325,45 @@ cd contracts
 forge test
 ```
 
-Expected: `52 passed; 0 failed`. Covers:
+Expected: `176 tests passed; 0 failed` across 10 suites + 3 stateful invariants. Breakdown:
 
-- 6 createVault tests (happy path + 5 revert cases including event emission)
-- 6 deposit tests (NAV-based share calculation in 3 regimes: inception, profit, loss)
-- 7 redeem tests (incl. revert on insufficient liquidity, paused vault, closed vault, underwater)
-- 7 deployToVenue tests (incl. an *intentional* adversarial test showing the agent-as-venue attack)
-- 4 returnFromVenue tests
-- 4 reportPnL tests (positive, negative, overwrite, not-agent)
-- 5 pause/close tests
-- 3 underwriter review tests
-- 3 multi-vault / multi-investor isolation tests
-- 3 view function tests
-- 1 end-to-end lifecycle test (agent + investor + venue + PnL + redeem)
+- 57 v0 core vault tests (`Plinth.t.sol`): createVault / deposit / redeem / deployToVenue / returnFromVenue / reportPnL / pause-close / multi-vault isolation / view functions / end-to-end lifecycle + 5 exploit POCs proving every Critical/High audit finding is reproducible on v0
+- 33 v0.5 defense tests (`PlinthV05.t.sol`): deposit cooldown, PnL magnitude cap, rate limit, returnFromVenue access control, strategyDescriptor length cap
+- 14 v0.6 RiskGuard tests (`PlinthV06.t.sol`): agent-as-venue flag, venue concentration cap revert, NAV floor auto-close, whale deposit flag
+- 12 Cadence × Plinth bridge tests (`CadencePlinthBridge.t.sol`)
+- 13 Crucible × Plinth bridge tests (`CruciblePlinthBridge.t.sol`)
+- 8 Helm × Plinth bridge tests (`HelmPlinthBridge.t.sol`)
+- 10 SponsorPool tests (`PlinthSponsorPool.t.sol`): sponsor + claim + dedup + refill-cycle + Sybil drain protection
+- 8 MockYieldVenue tests, 10 MorphoVenueAdapter tests, 11 SynthraSpotVenue tests (yield-strategy + IYieldVenue adapter coverage)
+- 3 stateful invariants (`PlinthV06Invariant.t.sol`): solvency, deployedAUM ledger consistency, shares conservation — fuzz-verified across 60K+ random call sequences
 
 ---
 
-## What's deferred to v0.2+
+## What's shipped post-v0 (May 2026)
 
-- **TypeScript SDK** (in progress for the hackathon)
-- **LLM Underwriter agent** that auto-reviews `strategyDescriptor` (in progress)
-- **Web UI** (in progress)
-- **Management + performance fees** — v0 has no fees
+- ✓ **TypeScript SDK** — `sdk-ts/` with @circle-fin SDK family integrated
+- ✓ **LLM Underwriter agent** — auto-reviews `strategyDescriptor` ([`underwriter/llm-reviewer.ts`](underwriter/llm-reviewer.ts))
+- ✓ **Web UI** — https://ccheh.github.io/plinth + verify.html (in-browser PnL reconciliation)
+- ✓ **Management fee primitives** — Cadence × Plinth (streaming), Crucible × Plinth (quality-proportional), Helm × Plinth (metric-conditional)
+- ✓ **USYC auto-yield path** — `IYieldVenue` interface + MorphoVenueAdapter scaffold; production CCTP integration in Grant M2
+- ✓ **Underwriter sustainability** — `PlinthSponsorPool` (per-vault investor → underwriter market)
+- ✓ **Public-goods extraction** — `@plinth/verifier-core` npm-ready package (`verifier-sdk/`)
+
+## What's deferred to v1.0+
+
 - **ERC-20 wrapping** of internal shares so they're tradable on AMMs
-- **NAV oracle integration** — replace agent self-reporting with verifiable feeds
+- **NAV oracle integration** — replace agent self-reporting with verifiable feeds (current verifiable-PnL path requires venue to be public-chain)
 - **Multi-asset vaults** — v0 is USDC-only
 - **Insurance / first-loss tranche** — investor protection from agent fraud
-- **USYC auto-yield** — sweep idle inVault into Circle's tokenized T-bills
+- **Mainnet deployment** — funded by Grant M4
 
 ---
 
 ## Honest limits
 
-- **v0, pre-audit, pre-deployment, no production adopters.** Treat this as research code shipped for the Agora Agents Hackathon (May 11–25, 2026).
-- **Agent self-reporting of PnL is trust-based — *unless the venue is also a public chain*.** A malicious agent on an opaque (CEX-style) venue can mark a position higher than reality to inflate NAV; v0 relies on Underwriter Review to catch it. When the venue is itself a public chain — like Aster L1, or future Arc-native perp DEXes — the Underwriter can independently reconcile the agent's claim against the venue's trade history (see Vault #5 above). v0.2 adds bond/stake economics on top.
-- **Agent can list themselves as an approved venue.** This is the intended *Underwriter-detectable* failure mode — flagged by off-chain review, not blocked on chain. Trade-off: simplicity now, reputation layer later.
+- **Testnet only, no production adopters yet.** v0.6 is live on Arc Testnet with 11-finding self-audit (exploit POC + defense test per Critical/High). Grant M1 funds external audit (Trail of Bits / Spearbit); Grant M4 funds mainnet deployment with $5K real TVL + Immunefi bounty.
+- **Agent self-reporting of PnL is trust-based — *unless the venue is also a public chain*.** A malicious agent on an opaque (CEX-style) venue can mark a position higher than reality to inflate NAV; we rely on Underwriter Review to catch it. When the venue is itself a public chain — like Aster L1, or future Arc-native perp DEXes — the Underwriter can independently reconcile the agent's claim against the venue's trade history (see Vault #5 above). v1.0 adds bond/stake economics on top.
+- **Agent can list themselves as an approved venue at create.** Detected and flagged on chain in v0.6 via `AgentAsVenueFlag` event at `createVault`, but not blocked — the design choice is to surface for Underwriter pipeline rather than refuse legitimate self-custodial agent vaults. Trade-off: flexibility now, reputation layer later.
 - **No on-chain enforcement of disclosed strategy.** The `strategyDescriptor` is free text. Agents may operate differently than they advertise. Investors must trust the Underwriter and the agent's track record.
 - **Native USDC only.** Plinth assumes 18-decimal native USDC (Arc Testnet semantics). Mainnet adaptation will require IERC-20 + approve/transferFrom semantics.
 
@@ -369,19 +373,29 @@ Expected: `52 passed; 0 failed`. Covers:
 
 ```
 contracts/src/
-├── Plinth.sol                   — core vault + share + NAV contract (≈ 240 LOC)
+├── Plinth.sol                   — v0 core vault + share + NAV contract
+├── PlinthV05.sol                — security-hardened v0.5 (closes 6 audit findings)
+├── PlinthV06.sol                — v0.6 + on-chain RiskGuard (4 hooks)
 ├── MockVenue.sol                — placeholder venue for tests and demo
-└── interfaces/
-    └── IPlinth.sol              — interface + events + errors
+├── MockYieldVenue.sol           — T-bill cash-sweep mock for IYieldVenue
+├── MorphoVenueAdapter.sol       — Morpho-on-Arc ERC-4626 scaffold
+├── SynthraSpotVenue.sol         — Arc-native DEX adapter scaffold
+├── MandatePlinthBridge.sol      — composition #1: capability-bound credit
+├── CadencePlinthBridge.sol      — composition #2: management fee streaming
+├── CruciblePlinthBridge.sol     — composition #3: quality-proportional fee
+├── HelmPlinthBridge.sol         — composition #4: metric-conditional fee
+├── PlinthSponsorPool.sol        — Underwriter network sustainability layer
+└── interfaces/                  — IPlinth, IYieldVenue, IPerpVerifier, etc.
 
-contracts/test/
-└── Plinth.t.sol                 — 52 forge tests
+contracts/test/                  — 10 suites, 176 unit tests + 3 stateful invariants
+contracts/script/                — Foundry deploy scripts for every contract above
 
-sdk-ts/                          — TypeScript SDK
-underwriter/                     — LLM-driven risk-assessment script
+sdk-ts/                          — TypeScript SDK + @circle-fin/* integration examples
+verifier-sdk/                    — @plinth/verifier-core npm-ready public-goods package
+underwriter/                     — LLM-reviewer + risk-monitor + aster-verifier off-chain agents
 aster/                           — Aster L1 venue adapter + verifiable-PnL Underwriter
-docs/                            — web UI + verifier review artifacts (gh-pages)
-video/                           — pitch video build pipeline
+docs/                            — security audit, charlie-test, deck, web UI (gh-pages)
+video/                           — pitch video + codebase walkthrough build pipeline
 ```
 
 ---

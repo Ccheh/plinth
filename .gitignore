@@ -39,6 +39,13 @@ video/audio/narration_*.mp3
 video/voice_test_*.mp3
 video/test_voices.py
 demoTEMP_MPY_wvf_snd.mp4
+# Regenerable from generate_*.py scripts — keep scripts + final mp4 only
+video/audio_addendum/
+video/audio_sent_addendum/
+video/audio_codebase/
+video/audio_sent_codebase/
+video/slides_addendum/
+video/slides_codebase/
 
 # Aster API docs (large, fetched from upstream for reference only)
 aster-futures-testnet.md
