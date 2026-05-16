@@ -541,8 +541,9 @@ narrative shifts from "deployed on testnet" to "lived mainnet ecosystem".
 
 ### Video demo of the product (Google Drive / YouTube unlisted)
 ```
-Pitch video (2:51):          https://youtu.be/OKGAcKOUQaw
-Codebase walkthrough (~6:00): [YouTube unlisted URL — to be uploaded after recording finishes]
+Pitch video (2:51):             https://youtu.be/OKGAcKOUQaw
+Codebase walkthrough (6:48):    https://youtu.be/MxEXgRlmTHE
+Mirror (direct mp4, 11 MB):     https://github.com/Ccheh/plinth/releases/download/v0-demo/demo-codebase.mp4
 ```
 > Pitch video covers Verifier, Risk Monitor, audit, v0.5, Mandate composition,
 > yield strategy. Codebase walkthrough is one cohesive 14-slide video: Part 1

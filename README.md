@@ -73,7 +73,9 @@ Combined deployed gas (v0 + v0.5): ~4M (~0.16 USDC at 40 gwei).
 
 - **Web UI**: https://ccheh.github.io/plinth/
 - **Verifiable-PnL Demo (interactive)**: https://ccheh.github.io/plinth/verify.html — reconciliation runs in your browser
-- **Pitch video**: [demo.mp4 (~3 min, v0.5 + composition + yield)](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4) — covers Verifier, Risk Monitor, security audit, v0.5, Mandate composition, yield strategy
+- **Pitch video** (2:51): [YouTube](https://youtu.be/OKGAcKOUQaw) · [mp4 mirror](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo.mp4) — Verifier, Risk Monitor, audit, v0.5, Mandate composition, yield strategy
+- **Codebase walkthrough** (6:48, 14 slides): [YouTube](https://youtu.be/MxEXgRlmTHE) · [mp4 mirror](https://github.com/Ccheh/plinth/releases/download/v0-demo/demo-codebase.mp4) — Part 1: 4 codebase locations (PlinthV06 RiskGuard, Cadence bridge, Circle SDK, Charlie wallet + Aster reconciliation); Part 2: 4 innovations (Crucible × Plinth, Helm × Plinth, @plinth/verifier-core, PlinthSponsorPool)
+- **Investor deck** (5 slides, PDF): [download](https://github.com/Ccheh/plinth/releases/download/v0-demo/plinth-deck.pdf)
 - **Submission one-pager**: [docs/submission.md](docs/submission.md)
 - **Quickstart for agent builders** (15 min integration): [docs/quickstart-for-agents.md](docs/quickstart-for-agents.md)
 - **Security audit**: [docs/security-audit.md](docs/security-audit.md) — 11 findings, 6 closed in v0.5
