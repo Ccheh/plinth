@@ -18,11 +18,14 @@ contract MockYieldVenueTest is Test {
 
     function setUp() public {
         plinth = new PlinthV05();
+        // Fund operator up front: newer forge nightlies lose the prank's
+        // "applied" mark if a cheatcode (vm.deal) sits between prank->new
+        // and the next prank, so keep prank/consumer pairs adjacent.
+        vm.deal(operator, 10 ether);
         // Operator deploys the yield venue
         vm.prank(operator);
         venue = new MockYieldVenue();
         // Operator pre-funds reserve so yield payouts are backed
-        vm.deal(operator, 10 ether);
         vm.prank(operator);
         venue.fundReserve{value: 1 ether}();
 
