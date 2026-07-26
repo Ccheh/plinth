@@ -6,6 +6,7 @@
 > a pre-declared, immutable whitelist of venues. Hedge-fund-grade
 > infrastructure for the agentic economy.
 
+[![CI](https://github.com/Ccheh/plinth/actions/workflows/ci.yml/badge.svg)](https://github.com/Ccheh/plinth/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-176%2F176%20%2B%203%20invariants-success)](#)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)](contracts/foundry.toml)
