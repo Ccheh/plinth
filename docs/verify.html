@@ -276,12 +276,19 @@
 </footer>
 
 <script type="module">
-import { createPublicClient, defineChain, http } from "https://esm.sh/viem@2.48.11";
+import { createPublicClient, defineChain, http, fallback } from "https://esm.sh/viem@2.48.11";
 
 // ─── Constants ─────────────────────────────────────────────────────
 const PLINTH = "0xc2994ce3df612ebd2f898244a992a0bbfef86627";
 const VAULT_ID = "0xefb495a02c14af970104d62e9623d83eea8d0b725dea9ffd6b7aa479284430fc";
-const RPC = "https://rpc.testnet.arc.network";
+// Arc's own rpc.testnet.arc.network sends no Access-Control-Allow-Origin, so a
+// browser can't read it. These provider endpoints do send CORS headers AND carry
+// full history; the official one stays last in case it regains CORS later.
+const RPCS = [
+  "https://rpc.drpc.testnet.arc.network",
+  "https://rpc.quicknode.testnet.arc.network",
+  "https://rpc.testnet.arc.network",
+];
 const EXPLORER = "https://testnet.arcscan.app";
 
 // Aster trade snapshot — captured via signed /fapi/v3/userTrades at submission time
@@ -299,9 +306,12 @@ const ASTER_TRADES = [
 const arc = defineChain({
   id: 5042002, name: "Arc Testnet",
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: { default: { http: [RPC] } },
+  rpcUrls: { default: { http: RPCS } },
 });
-const client = createPublicClient({ chain: arc, transport: http(RPC, { timeout: 60_000, retryCount: 2 }) });
+const client = createPublicClient({
+  chain: arc,
+  transport: fallback(RPCS.map(u => http(u, { timeout: 60_000, retryCount: 2 }))),
+});
 
 const PLINTH_ABI = [
   { type:"function", name:"vaults", stateMutability:"view", inputs:[{type:"bytes32"}],
