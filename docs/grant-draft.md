@@ -226,7 +226,7 @@ fundraising overhead. Direct git → contract path.
 ### Which Circle products are currently integrated? (check this box list)
 - [x] **USDC** — native gas on Arc; MIN_DEPOSIT 0.0001 USDC viable only because of this
 - [x] **Bridge Kit** — `@circle-fin/bridge-kit` wired into `sdk-ts/examples/yield-strategy.ts`
-- [x] **CCTP** — production path for USYC on Base; `@circle-fin/provider-cctp-v2` integrated
+- [x] **CCTP** — production path for USYC on Base, driven through Bridge Kit's CCTP v2 provider (`@circle-fin/provider-cctp-v2`)
 - [x] **Contracts** — Arc Testnet contracts (PlinthV05, V06, MockYieldVenue, MorphoVenueAdapter scaffold, SynthraSpotVenue scaffold, MandatePlinthBridge, CadencePlinthBridge, CruciblePlinthBridge, HelmPlinthBridge, PlinthSponsorPool, MockVenue — 11 total)
 - [ ] EURC
 - [ ] Gateway (planned v0.7)
