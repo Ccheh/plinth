@@ -24,12 +24,11 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@circle-fin/adapter-viem-v2": "^1.11.0",
-    "@circle-fin/bridge-kit": "^1.10.0",
-    "@circle-fin/provider-cctp-v2": "^1.8.1",
     "viem": "^2.48.11"
   },
   "devDependencies": {
+    "@circle-fin/adapter-viem-v2": "^1.14.1",
+    "@circle-fin/bridge-kit": "^1.12.2",
     "@types/node": "^25.7.0",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
